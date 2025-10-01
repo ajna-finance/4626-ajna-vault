@@ -1,0 +1,25 @@
+cache/
+*out/
+node_modules/*
+node_modules
+.env
+.env.prod
+.idea/
+.vscode/
+__pycache__/
+reports/
+.gas-snapshot
+.DS_store
+coverage/
+*.info
+report/
+keystore/
+broadcast/
+logFile.txt
+*.log
+
+# Certora
+.certora_internal/
+.certora_recent_jobs.json
+.zip-output-url.txt
+*.zip

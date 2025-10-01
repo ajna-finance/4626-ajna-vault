@@ -1,0 +1,36 @@
+{
+  "$schema": "./vault-config.schema.json",
+  "_comment": "Example configuration file for Ajna Vault deployment",
+  "_documentation": {
+    "pool": "Address of the Ajna pool contract",
+    "sage": "Address of PoolInfoUtils contract",
+    "asset": "Address of the quote token (must match pool's quote token)",
+    "name": "Human-readable name for the vault token",
+    "symbol": "Symbol for the vault token (typically 3-5 characters)",
+    "admin": "Address that will have admin privileges (defaults to deployer)",
+    "swapper": "Address that can swap collateral (optional)",
+    "keepers": "Array of addresses that can manage liquidity",
+    "depositCap": "Maximum total deposits in wei (0 = unlimited)",
+    "bufferRatio": "Target buffer percentage in basis points (1000 = 10%)",
+    "toll": "Deposit fee in basis points (50 = 0.5%)",
+    "tax": "Withdrawal fee in basis points (25 = 0.25%)",
+    "minBucketIndex": "Minimum bucket index for keeper operations (0 = no limit)"
+  },
+
+  "pool": "0x34bC3D3d274A355f3404c5dEe2a96335540234de",
+  "sage": "0x30c5eF2997d6a882DE52c4ec01B6D0a5e5B4fAAE",
+  "asset": "0xA0b86a33E6441b8b3b923bCE4c9aAb87Cc9Ca433",
+  "name": "sUSDe-DAI Ajna Vault",
+  "symbol": "aUSDe-DAI",
+  "admin": "0x1234567890123456789012345678901234567890",
+  "swapper": "0x2345678901234567890123456789012345678901",
+  "keepers": [
+    "0x3456789012345678901234567890123456789012",
+    "0x4567890123456789012345678901234567890123"
+  ],
+  "depositCap": "1000000000000000000000000",
+  "bufferRatio": 1000,
+  "toll": 50,
+  "tax": 25,
+  "minBucketIndex": 2000
+}

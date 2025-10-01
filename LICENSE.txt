@@ -1,0 +1,16 @@
+SPDX-License-Identifier: LicenseRef-SkyAlpha-Proprietary
+© 2025 SkyAlpha Ventures LLC. All rights reserved.
+No claims against contributors: to the maximum extent permitted by applicable law, each contributor
+provides its contributions "AS IS", disclaims all warranties, and shall have no liability whatsoever
+For any damages arising from or relating to the Software or its use.
+
+All original code in this repository © 2025 SkyAlpha Ventures LLC.
+Licensed under the SkyAlpha-Proprietary license (see above).
+
+This repository also includes third-party open source components:
+
+    OpenZeppelin Contracts (MIT License)
+    © OpenZeppelin, available at https://github.com/OpenZeppelin/openzeppelin-contracts
+
+    Foundry Standard Library - forge-std (License: AGPL-3.0)
+    © Foundry (Paradigm), available at https://github.com/foundry-rs/forge-std
