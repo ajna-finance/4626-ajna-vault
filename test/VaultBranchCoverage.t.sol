@@ -16,7 +16,7 @@ contract VaultBranchCoverageTest is VaultBaseTest {
     // Test Line 63: Invalid quote token in constructor
     function test_fail_constructor_invalidQuoteToken() public {
         // Create a pool mock (which creates its own quote token)
-        PoolMock poolWithWrongQuoteToken = new PoolMock();
+        PoolMock poolWithWrongQuoteToken = new PoolMock(address(0), address(0));
         
         // Try to create vault with a different asset than the pool's quote token
         MockERC20 differentToken = new MockERC20("Different", "DIFF", 18);
@@ -34,7 +34,7 @@ contract VaultBranchCoverageTest is VaultBaseTest {
 
     // Test Line 68: Invalid asset decimals in constructor (0 decimals)
     function test_fail_constructor_zeroDecimals() public {
-        PoolMock testPool = new PoolMock();
+        PoolMock testPool = new PoolMock(address(0), address(0));
         address quoteToken = testPool.quoteTokenAddress();
         
         // Mock the decimals call to return 0
@@ -57,7 +57,7 @@ contract VaultBranchCoverageTest is VaultBaseTest {
 
     // Test Line 68: Invalid asset decimals in constructor (>18 decimals)
     function test_fail_constructor_tooManyDecimals() public {
-        PoolMock testPool = new PoolMock();
+        PoolMock testPool = new PoolMock(address(0), address(0));
         address quoteToken = testPool.quoteTokenAddress();
         
         // Mock the decimals call to return 19

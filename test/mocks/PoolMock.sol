@@ -29,10 +29,10 @@ contract PoolMock {
     mapping(uint256 => uint256) public bucketLps; // bucket => LP amount
     mapping(uint256 => uint256) public bucketAssets; // bucket => asset amount
 
-    constructor() {
-        quoteTokenAddress = address(new ERC20("QuoteToken", "QT"));
-        collateralAddress = address(new ERC20("Collateral", "COL"));
-        assetDecimals = 18;
+    constructor(address quoteToken, address collateral) {
+        quoteTokenAddress = quoteToken == address(0) ? address(new ERC20("QuoteToken", "QT")) : quoteToken;
+        collateralAddress = collateral == address(0) ? address(new ERC20("Collateral", "COL")) : collateral;
+        assetDecimals = ERC20(quoteTokenAddress).decimals();
         lastInterestUpdate = block.timestamp;
     }
 

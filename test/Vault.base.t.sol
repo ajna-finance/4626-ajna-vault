@@ -65,7 +65,7 @@ abstract contract VaultBaseTest is Test {
             console.log("block.timestamp", block.timestamp);
             console.log();
         } catch {
-            pool = IPool(address(new PoolMock()));
+            pool = IPool(address(new PoolMock(address(0), address(0))));
             info = PoolInfoUtils(address(new SageMock()));
             console.log("block.timestamp", block.timestamp);
         }

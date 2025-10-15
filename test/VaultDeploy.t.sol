@@ -34,7 +34,6 @@ contract VaultDeployTest is Test {
 
         // Set up mocks to match the addresses in our config file but use real asset
         address poolAddr = address(0x1111111111111111111111111111111111111111);
-        address sageAddr = address(0x2222222222222222222222222222222222222222);
         address configAssetAddr = address(0x3333333333333333333333333333333333333333);
 
         // Mock the pool's quoteTokenAddress to return the config asset address
@@ -233,7 +232,7 @@ contract VaultDeployTest is Test {
         assertGt(bufferAddress.code.length, 0, "Buffer should have code deployed");
     }
 
-    function _setupMocksForConfig(address poolAddr, address sageAddr, address assetAddr) internal {
+    function _setupMocksForConfig(address poolAddr, address assetAddr) internal {
         // Mock the pool's quoteTokenAddress to return the asset
         vm.mockCall(
             poolAddr,
