@@ -481,4 +481,8 @@ contract Vault is IVault, ERC4626 {
     function _getAssetsWithFee(uint256 _fee, uint256 _assets) internal pure returns (uint256 assetsWithFee) {
         assetsWithFee = (_assets * 10000) / (10000 - _fee);
     }
+
+    function _decimalsOffset() internal view override returns (uint8) {
+        return 18 - assetDecimals;
+    }
 }
