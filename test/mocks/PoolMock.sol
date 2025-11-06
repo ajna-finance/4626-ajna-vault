@@ -154,4 +154,8 @@ contract PoolMock {
         return (_amount, _amount);
     }
 
+    function lenderInfo(uint256 _bucket, address _vault) external view returns (uint256, uint256) {
+        return (bucketLps[_bucket], 0);
+    }
+
 }

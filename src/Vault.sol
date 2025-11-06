@@ -368,7 +368,11 @@ contract Vault is IVault, ERC4626 {
     }
 
     function lpToValue(uint256 _bucket) public view returns (uint256) {
-        return AVL.lpToValue(INFO, POOL, _bucket, lps[_bucket]);
+        uint256 _lps = lps[_bucket];
+        (uint256 _newLps, /* depositTime */) = POOL.lenderInfo(_bucket, address(this));
+
+        if (_newLps < _lps) _lps = _newLps;
+        return AVL.lpToValue(INFO, POOL, _bucket, _lps);
     }
 
     function paused() public view returns (bool) {

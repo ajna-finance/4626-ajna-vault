@@ -101,4 +101,16 @@ abstract contract VaultBaseTest is Test {
         // TODO replace with the configurable pool ratio when admin is added
         return (_totalAssets * 9000) / 10000;
     }
+    
+    function _mockLenderInfo(uint256 _bucket, uint256 _newLps) internal {
+        vm.mockCall(
+            address(pool),
+            abi.encodeWithSelector(
+                pool.lenderInfo.selector,
+                _bucket,
+                address(vault)
+            ),
+            abi.encode(_newLps, block.timestamp)
+        );
+    }
 }

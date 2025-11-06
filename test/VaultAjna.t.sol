@@ -498,4 +498,126 @@ contract VaultAjnaTest is VaultBaseTest {
         // Verify the move worked
         assertTrue(vault.bufferLps() > 0, "Admin moveToBuffer should have increased buffer LPs");
     }
+
+    // TEST FOR lpToValue POOL CHECK FUNCTIONALITY
+    function test_lpToValue_usesPoolLpsWhenLower() public {
+        // Setup: deposit funds and move to bucket
+        vm.prank(alice);
+        vault.deposit(100 ether, alice);
+
+        uint256 testBucket = 4000;
+
+        // Move funds to create bucket with LPs
+        vm.prank(keeper);
+        vault.moveFromBuffer(testBucket, 50 ether);
+
+        uint256 originalLps = vault.lps(testBucket);
+        assertGt(originalLps, 0, "Should have LPs in bucket");
+
+        // Get the original lpToValue (before mocking)
+        uint256 originalValue = vault.lpToValue(testBucket);
+        assertGt(originalValue, 0, "Original value should be greater than 0");
+
+        // Mock the pool to return fewer LPs (50% of original)
+        uint256 poolReportedLps = originalLps / 2;
+        _mockLenderInfo(testBucket, poolReportedLps);
+
+        // Call lpToValue - it should now use the lower LP count from the pool
+        uint256 valueWithFewerLps = vault.lpToValue(testBucket);
+
+        // The value should be less than the original value since we're using fewer LPs
+        assertLt(valueWithFewerLps, originalValue, "Value with fewer LPs should be lower than original");
+
+        // The value should be approximately half of the original (allowing for rounding)
+        assertApproxEqAbs(valueWithFewerLps, originalValue / 2, originalValue / 100, "Value should be approximately half");
+    }
+
+    function test_lpToValue_usesTrackedLpsWhenPoolHasMore() public {
+        // Setup: deposit funds and move to bucket
+        vm.prank(alice);
+        vault.deposit(100 ether, alice);
+
+        uint256 testBucket = 4000;
+
+        // Move funds to create bucket with LPs
+        vm.prank(keeper);
+        vault.moveFromBuffer(testBucket, 50 ether);
+
+        uint256 originalLps = vault.lps(testBucket);
+        assertGt(originalLps, 0, "Should have LPs in bucket");
+
+        // Get the original lpToValue
+        uint256 originalValue = vault.lpToValue(testBucket);
+        assertGt(originalValue, 0, "Original value should be greater than 0");
+
+        // Mock the pool to return MORE LPs (150% of tracked)
+        uint256 poolReportedLps = (originalLps * 150) / 100;
+        _mockLenderInfo(testBucket, poolReportedLps);
+
+        // Call lpToValue - it should still use our tracked LPs (the lower value)
+        uint256 valueAfterMock = vault.lpToValue(testBucket);
+
+        // The value should remain the same since we use the minimum
+        assertEq(valueAfterMock, originalValue, "Value should remain the same when pool reports more LPs");
+    }
+
+    function test_lpToValue_handlesZeroPoolLps() public {
+        // Setup: deposit funds and move to bucket
+        vm.prank(alice);
+        vault.deposit(100 ether, alice);
+
+        uint256 testBucket = 4000;
+
+        // Move funds to create bucket with LPs
+        vm.prank(keeper);
+        vault.moveFromBuffer(testBucket, 50 ether);
+
+        uint256 originalLps = vault.lps(testBucket);
+        assertGt(originalLps, 0, "Should have LPs in bucket");
+
+        // Mock the pool to return 0 LPs (complete drain scenario)
+        _mockLenderInfo(testBucket, 0);
+
+        // Call lpToValue - it should return 0 since pool has no LPs
+        uint256 valueWithZeroLps = vault.lpToValue(testBucket);
+
+        // The value should be 0 since pool reports 0 LPs
+        assertEq(valueWithZeroLps, 0, "Value should be 0 when pool reports 0 LPs");
+    }
+
+    function testFuzz_lpToValue_alwaysUsesMinimum(uint256 reductionPercent) public {
+        // Bound the reduction percentage to 0-200% (0 = total drain, 100 = same, 200 = double)
+        reductionPercent = bound(reductionPercent, 0, 200);
+
+        // Setup: deposit funds and move to bucket
+        vm.prank(alice);
+        vault.deposit(100 ether, alice);
+
+        uint256 testBucket = 4000;
+
+        // Move funds to create bucket with LPs
+        vm.prank(keeper);
+        vault.moveFromBuffer(testBucket, 50 ether);
+
+        uint256 trackedLps = vault.lps(testBucket);
+        assertGt(trackedLps, 0, "Should have LPs in bucket");
+
+        // Get the original value for reference
+        uint256 originalValue = vault.lpToValue(testBucket);
+
+        // Mock the pool to return a percentage of original LPs
+        uint256 poolReportedLps = (trackedLps * reductionPercent) / 100;
+        _mockLenderInfo(testBucket, poolReportedLps);
+
+        // Call lpToValue
+        uint256 actualValue = vault.lpToValue(testBucket);
+
+        // If pool reports fewer LPs, value should be proportionally less
+        if (poolReportedLps < trackedLps) {
+            assertLt(actualValue, originalValue, "Value should be less when pool reports fewer LPs");
+        } else {
+            // If pool reports same or more LPs, value should stay the same
+            assertEq(actualValue, originalValue, "Value should stay same when pool reports same or more LPs");
+        }
+    }
 }

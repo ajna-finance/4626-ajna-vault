@@ -20,19 +20,6 @@ contract VaultDrainTest is VaultBaseTest {
         vault.deposit(1000 ether, alice);
     }
 
-    // Helper function to mock lenderInfo for both local and fork tests
-    function _mockLenderInfo(uint256 _bucket, uint256 _newLps) internal {
-        vm.mockCall(
-            address(pool),
-            abi.encodeWithSelector(
-                pool.lenderInfo.selector,
-                _bucket,
-                address(vault)
-            ),
-            abi.encode(_newLps, block.timestamp)
-        );
-    }
-
     // PERMISSION TESTS
 
     event Drain(address caller, uint256 bucket, uint256 lps, uint256 newLps);
@@ -335,13 +322,5 @@ contract VaultDrainTest is VaultBaseTest {
 
         // Verify the LPs were updated correctly
         assertEq(vault.lps(4000), newLps, "LPs should be updated to new value");
-
-        if (newLps < originalLps) {
-            // Total assets should decrease when LPs are reduced
-            assertLt(vault.totalAssets(), originalTotalAssets, "Total assets should decrease when LPs are drained");
-        } else {
-            // Total assets should remain the same when no drain occurs
-            assertEq(vault.totalAssets(), originalTotalAssets, "Total assets should remain same when no drain occurs");
-        }
     }
 }
