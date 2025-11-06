@@ -274,7 +274,9 @@ contract Vault4626Test is VaultBaseTest {
             abi.encodeWithSelector(info.bucketInfo.selector, address(pool), htpIndex),
             abi.encode(price, 0, gemsToRecover, bucketLP, 0, 0)
         );
-        vault.recoverCollateral(htpIndex, gemsToRecover);
+        uint256[] memory indexes = new uint256[](1);
+        indexes[0] = htpIndex;
+        vault.recoverCollateral(indexes, gemsToRecover);
         vm.stopPrank();
 
         assertEq(IERC20(gem).balanceOf(admin), gemBalanceBefore + gemsToRecover, "Admin didn't receive assets");
@@ -363,7 +365,9 @@ contract Vault4626Test is VaultBaseTest {
             abi.encodeWithSelector(info.bucketInfo.selector, address(pool), htpIndex),
             abi.encode(price, 0, gemsToRecover, bucketLP, 0, 0)
         );
-        vault.recoverCollateral(htpIndex, gemsToRecover);
+        uint256[] memory indexes = new uint256[](1);
+        indexes[0] = htpIndex;
+        vault.recoverCollateral(indexes, gemsToRecover);
         vm.stopPrank();
 
         assertEq(IERC20(gem).balanceOf(swapper), gemBalanceBefore + gemsToRecover, "Swapper didn't receive assets");
@@ -415,7 +419,9 @@ contract Vault4626Test is VaultBaseTest {
     function test_failRecoverCollateralNotAdmin() public {
         vm.expectRevert(abi.encodeWithSelector(IVault.NotAuthorized.selector));
         vm.prank(alice);
-        vault.recoverCollateral(0, 0);
+        uint256[] memory indexes = new uint256[](1);
+        indexes[0] = 0;
+        vault.recoverCollateral(indexes, 0);
     }
 
     function test_failReturnQuoteTokenNotAdmin() public {
@@ -536,7 +542,9 @@ contract Vault4626Test is VaultBaseTest {
             abi.encodeWithSelector(info.bucketInfo.selector, address(pool), htpIndex),
             abi.encode(price, 0, collateralWad, bucketLP, 0, 0)
         );
-        vault.recoverCollateral(htpIndex, collateralWad);
+        uint256[] memory indexes = new uint256[](1);
+        indexes[0] = htpIndex;
+        vault.recoverCollateral(indexes, collateralWad);
         vm.stopPrank();
 
         assertEq(IERC20(gem).balanceOf(admin), gemBalanceBefore + gemsToRecover, "Admin didn't receive 6-decimal collateral");
