@@ -184,33 +184,4 @@ contract VaultShareDecimalsBugProof is Test {
 
         assertEq(shares, 495 * 10**18, "Shares are in 18 decimals (proving the bug is fixed)");
     }
-
-    /**
-     * @notice Shows the formula breakdown
-     */
-    function test_BugProof_FormulaBreakdown() public view {
-        console.log("========================================");
-        console.log("ERC4626 FORMULA BREAKDOWN");
-        console.log("========================================");
-        console.log("");
-        console.log("Formula: shares = assets * (totalSupply + 10^offset) / (totalAssets + 1)");
-        console.log("");
-        console.log("For USDC vault (6 decimals):");
-        console.log("  assets:              500000000 (500 * 10^6)");
-        console.log("  totalSupply:         0");
-        console.log("  totalAssets:         0");
-        console.log("  _decimalsOffset:     0 (BUG!)");
-        console.log("  10^offset:           1");
-        console.log("");
-        console.log("Calculation:");
-        console.log("  shares = 500000000 * (0 + 1) / (0 + 1)");
-        console.log("  shares = 500000000 * 1");
-        console.log("  shares = 500000000 (only 6 decimals!)");
-        console.log("");
-        console.log("With correct offset = 12:");
-        console.log("  10^offset:           1000000000000");
-        console.log("  shares = 500000000 * 1000000000000 / 1");
-        console.log("  shares = 500000000000000000000 (correct 18 decimals!)");
-        console.log("========================================");
-    }
 }

@@ -316,27 +316,24 @@ contract Vault is IVault, ERC4626 {
     }
 
     // ADMIN and SWAPPER FUNCTIONS
-    function recoverCollateral(uint256[] memory _fromIndexes, uint256 _amt) external {
+    function recoverCollateral(uint256 fromIndex, uint256 _amt) external {
         _onlyAdminOrSwapper();
         if (AUTH.paused()) revert VaultPaused();
 
-        for (uint256 i = 0; i < _fromIndexes.length; i++) {
-            uint256 _fromIndex = _fromIndexes[i];
-            (uint256 colLps, address gem, uint256 gems, uint256 value) = AVL.recoverCollateral(
-                INFO,
-                POOL,
-                _fromIndex,
-                _amt
-            );
+        (uint256 totalValue) = AVL.recoverCollateral(
+            INFO,
+            POOL,
+            fromIndex,
+            _amt,
+            lps,
+            buckets,
+            bucketsIndex,
+            LP_DUST
+        );
 
-            removedCollateralValue += value;
-            
-            _wash(address(POOL), _fromIndex, colLps);
-            uint256 gemsToTransfer = AVL.convertWadToAsset(gems, ERC20(gem).decimals());
-            IERC20(gem).safeTransfer(msg.sender, gemsToTransfer);
+        removedCollateralValue += totalValue;
 
-            emit RecoverCollateral(msg.sender, _fromIndex, _amt, colLps, value);
-        }
+        emit RecoverCollateral(msg.sender, fromIndex, totalValue);
     }
 
     function returnQuoteToken(uint256 _toIndex, uint256 _amt) external {
