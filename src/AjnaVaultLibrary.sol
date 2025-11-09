@@ -7,7 +7,7 @@
 pragma solidity ^0.8.18;
 
 import {IVault} from "./interfaces/IVault.sol";
-import {ERC4626, ERC20} from "./ERC4626.sol";
+import {ERC4626} from "./ERC4626.sol";
 import {Vault} from "./Vault.sol";
 import {IVaultAuth} from "./interfaces/IVaultAuth.sol";
 import {IBuffer} from "./interfaces/IBuffer.sol";
@@ -101,42 +101,23 @@ library AjnaVaultLibrary {
     function recoverCollateral(
         PoolInfoUtils _info,
         IPool _pool,
-        uint256 fromIndex,
-        uint256 _amt,
-        mapping(uint256 => uint256) storage _lpsMap,
-        uint256[] storage _buckets,
-        mapping(uint256 => uint256) storage _bucketsIndex,
-        uint256 _lpDust
-    ) external returns (uint256 totalValue_) {
+        uint256 _fromIndex,
+        uint256 _amt
+    ) external returns (uint256 _colLps, address _gem, uint256 _gems, uint256 _value) {
         _pool.updateInterest();
-        address gem = _pool.collateralAddress();
 
         (
-            uint256 price,
+            uint256 _price,
             /* _quoteToken */,
             /* _collateral */,
             /* _bucketLP */,
             /* scale */,
             /* exchangeRate */
-        ) = _info.bucketInfo(address(_pool), fromIndex);
+        ) = _info.bucketInfo(address(_pool), _fromIndex );
+        _gem = _pool.collateralAddress();
 
-        (uint256 gems, uint256 colLps) = _pool.removeCollateral(_amt, fromIndex);
-        uint256 value = (gems * price) / WAD;
-
-        totalValue_ += value;
-
-        _washBucket(
-            address(_pool),
-            fromIndex,
-            colLps,
-            _lpsMap,
-            _buckets,
-            _bucketsIndex,
-            _lpDust
-        );
-
-        uint256 gemsToTransfer = _convertWadToAsset(gems, ERC20(gem).decimals());
-        IERC20(gem).safeTransfer(msg.sender, gemsToTransfer);
+        (_gems, _colLps) = _pool.removeCollateral(_amt, _fromIndex);
+        _value = (_gems * _price) / WAD;
     }
 
     function returnQuoteToken(
@@ -306,35 +287,24 @@ library AjnaVaultLibrary {
         mapping(uint256 => uint256) storage _bucketsIndex,
         uint256 _lpDust
     ) external returns (uint256 bufferLps_) {
+        uint256 afterLps;
         if (_pool == _buffer) {
             bufferLps_ = _bufferLps - _lps;
+            afterLps = bufferLps_;
         } else {
             bufferLps_ = _bufferLps;
-            _washBucket(_pool, _bucket, _lps, _lpsMap, _buckets, _bucketsIndex, _lpDust);
+            _lpsMap[_bucket] -= _lps;
+            afterLps = _lpsMap[_bucket];
+            if (afterLps == 0) {
+                uint256 removedIndex = _bucketsIndex[_bucket];
+                uint256 lastBucket = _buckets[_buckets.length - 1];
+                _buckets[removedIndex] = lastBucket;
+                _buckets.pop();
+                _bucketsIndex[lastBucket] = removedIndex;
+                delete _bucketsIndex[_bucket];
+            }
         }
-    }
-
-    function _washBucket(
-        address _pool,
-        uint256 _bucket,
-        uint256 _lps,
-        mapping(uint256 => uint256) storage _lpsMap,
-        uint256[] storage _buckets,
-        mapping(uint256 => uint256) storage _bucketsIndex,
-        uint256 _lpDust
-    ) internal {
-        _lpsMap[_bucket] -= _lps;
-        uint256 afterLps = _lpsMap[_bucket];
-        if (afterLps == 0) {
-            uint256 removedIndex = _bucketsIndex[_bucket];
-            uint256 lastBucket = _buckets[_buckets.length - 1];
-            _buckets[removedIndex] = lastBucket;
-            _buckets.pop();
-            _bucketsIndex[lastBucket] = removedIndex;
-            delete _bucketsIndex[_bucket];
-        } else if (afterLps < _lpDust) { // Not 0 so we need to check if it's dusty
-            revert IVault.DustyBucket(_pool, _bucket);
-        }
+        if (afterLps != 0 && afterLps < _lpDust) revert IVault.DustyBucket(_pool, _bucket);
     }
 
     function _checkBufferRatio(

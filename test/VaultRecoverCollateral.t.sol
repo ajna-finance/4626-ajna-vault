@@ -50,7 +50,9 @@ contract VaultRecoverCollateralTest is VaultBaseTest {
             abi.encode(params.price, 0, params.gems, params.bucketLP, 0, 0)
         );
 
-        vault.recoverCollateral(bucketIndex, params.gems);
+        uint256[] memory indexes = new uint256[](1);
+        indexes[0] = bucketIndex;
+        vault.recoverCollateral(indexes, params.gems);
         vm.stopPrank();
     }
 
@@ -66,8 +68,11 @@ contract VaultRecoverCollateralTest is VaultBaseTest {
         vm.startPrank(caller);
         _setupMocksForBucket(bucket1, params1);
         _setupMocksForBucket(bucket2, params2);
-        vault.recoverCollateral(bucket1, params1.gems);
-        vault.recoverCollateral(bucket2, params2.gems);
+
+        uint256[] memory indexes = new uint256[](2);
+        indexes[0] = bucket1;
+        indexes[1] = bucket2;
+        vault.recoverCollateral(indexes, params1.gems);
         vm.stopPrank();
     }
 
@@ -222,7 +227,9 @@ contract VaultRecoverCollateralTest is VaultBaseTest {
 
         vm.expectRevert(abi.encodeWithSelector(IVault.VaultPaused.selector));
         vm.prank(admin);
-        vault.recoverCollateral(htpIndex, 100);
+        uint256[] memory indexes = new uint256[](1);
+        indexes[0] = htpIndex;
+        vault.recoverCollateral(indexes, 100);
     }
 
     function test_recoverCollateral_whenPaused_byRemovedCollateral() public {
@@ -262,7 +269,9 @@ contract VaultRecoverCollateralTest is VaultBaseTest {
 
         vm.expectRevert(abi.encodeWithSelector(IVault.VaultPaused.selector));
         vm.prank(admin);
-        vault.recoverCollateral(htpIndex, 100);
+        uint256[] memory indexes = new uint256[](1);
+        indexes[0] = htpIndex;
+        vault.recoverCollateral(indexes, 100);
 
         vm.prank(admin);
         auth.unpause();
@@ -275,4 +284,16 @@ contract VaultRecoverCollateralTest is VaultBaseTest {
         assertTrue(vault.paused(), "Vault should be paused after recovery");
     }
 
+    // ============ EDGE CASE TESTS ============
+
+    function test_recoverCollateral_emptyArray() public {
+        uint256 removedValueBefore = vault.removedCollateralValue();
+
+        vm.prank(admin);
+        uint256[] memory indexes = new uint256[](0);
+        vault.recoverCollateral(indexes, 100);
+
+        assertEq(vault.removedCollateralValue(), removedValueBefore, "Removed collateral value should not change");
+        assertFalse(vault.paused(), "Vault should not be paused");
+    }
 }
