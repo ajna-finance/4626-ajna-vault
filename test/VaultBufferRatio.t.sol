@@ -125,7 +125,7 @@ contract VaultBufferRatioTest is VaultBaseTest {
         vault.moveFromBuffer(htpIndex, 750 * WAD);
         
         // Buffer should now have exactly 25%
-        uint256 bufferValue = vault.BUFFER().lpToValue(vault.bufferLps());
+        uint256 bufferValue = Buffer(vault.buffer()).lpToValue(vault.bufferLps());
         uint256 totalAssets = vault.totalAssets();
         uint256 bufferPercent = (bufferValue * 10000) / totalAssets;
         
