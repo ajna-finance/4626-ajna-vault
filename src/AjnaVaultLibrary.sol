@@ -272,8 +272,8 @@ library AjnaVaultLibrary {
             }
             _lpsMap[_bucket] += _lps;
             afterLps = _lpsMap[_bucket];
+            if (afterLps < _lpDust) revert IVault.DustyBucket(_pool, _bucket);
         }
-        if (afterLps < _lpDust) revert IVault.DustyBucket(_pool, _bucket);
     }
 
     function wash(
