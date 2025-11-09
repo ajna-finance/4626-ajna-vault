@@ -255,7 +255,7 @@ contract Vault is IVault, ERC4626 {
         emit Withdraw(caller, receiver, owner, assets, shares);
     }
 
-    // ADMIN AND KEEPER FUNCTIONS
+    // Permissioned Functions
     function move(uint256 _fromIndex, uint256 _toIndex, uint256 _wad) external lock notPaused {
         (uint256 _fromLps, uint256 _toLps) = AVL.move(
             INFO,
@@ -271,7 +271,6 @@ contract Vault is IVault, ERC4626 {
         emit Move(msg.sender, address(POOL), _fromIndex, _toIndex, _wad);
     }
 
-    // KEEPER FUNCTIONS  
     function moveFromBuffer(uint256 _toIndex, uint256 _wad) external lock notPaused {        
         (uint256 _fromLps, uint256 _toLps) = AVL.moveFromBuffer(
             INFO,
@@ -315,7 +314,6 @@ contract Vault is IVault, ERC4626 {
         emit MoveToBuffer(msg.sender, address(POOL), _fromIndex, _wad);
     }
 
-    // ADMIN and SWAPPER FUNCTIONS
     function recoverCollateral(uint256 _fromIndex, uint256 _amt) external notPaused {
         _onlyAdminOrSwapper();
 
