@@ -215,6 +215,11 @@ contract VaultDrainTest is VaultBaseTest {
         // Mock the pool to return 0 LPs (complete drain)
         _mockLenderInfo(4000, 0);
 
+        uint256[] memory buckets = vault.getBuckets();
+        assertEq(buckets.length, 1, "Should have 1 bucket");
+        assertEq(buckets[0], 4000, "Bucket should be in buckets");
+        assertEq(vault.bucketsIndex(4000), 0, "Bucket index should be removed from buckets index");
+        
         // Call drain
         vm.expectEmit(true, true, true, true);
         emit Drain(admin, 4000, originalLps, 0);
@@ -224,6 +229,9 @@ contract VaultDrainTest is VaultBaseTest {
 
         // Verify the LPs were set to 0
         assertEq(vault.lps(4000), 0, "LPs should be set to 0 when pool is completely drained");
+        uint256[] memory afterBuckets = vault.getBuckets();
+        assertEq(afterBuckets.length, 0, "Should have 0 buckets");
+        assertEq(vault.bucketsIndex(4000), 0, "Bucket index should be removed from buckets index");
     }
 
     // FORK-SPECIFIC TESTS (use real pool data)

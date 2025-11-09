@@ -326,15 +326,31 @@ library AjnaVaultLibrary {
         _lpsMap[_bucket] -= _lps;
         uint256 afterLps = _lpsMap[_bucket];
         if (afterLps == 0) {
-            uint256 removedIndex = _bucketsIndex[_bucket];
-            uint256 lastBucket = _buckets[_buckets.length - 1];
-            _buckets[removedIndex] = lastBucket;
-            _buckets.pop();
-            _bucketsIndex[lastBucket] = removedIndex;
-            delete _bucketsIndex[_bucket];
-        } else if (afterLps < _lpDust) { // Not 0 so we need to check if it's dusty
+            _removeBucket(_buckets, _bucketsIndex, _bucket);
+        } else if (afterLps < _lpDust) {
             revert IVault.DustyBucket(_pool, _bucket);
         }
+    }
+
+    function removeBucket(
+        uint256[] storage _buckets,
+        mapping(uint256 => uint256) storage _bucketsIndex,
+        uint256 _bucket
+    ) external {
+        _removeBucket(_buckets, _bucketsIndex, _bucket);
+    }
+
+    function _removeBucket(
+        uint256[] storage _buckets,
+        mapping(uint256 => uint256) storage _bucketsIndex,
+        uint256 _bucket
+    ) internal {
+        uint256 removedIndex = _bucketsIndex[_bucket];
+        uint256 lastBucket = _buckets[_buckets.length - 1];
+        _buckets[removedIndex] = lastBucket;
+        _buckets.pop();
+        _bucketsIndex[lastBucket] = removedIndex;
+        delete _bucketsIndex[_bucket];
     }
 
     function _checkBufferRatio(
