@@ -26,9 +26,10 @@ contract Vault is IVault, ERC4626 {
     uint256 public constant WAD = 1e18;
 
     // IMMUTABLES
-    IPool         public immutable POOL;
-    PoolInfoUtils public immutable INFO;
-    Buffer        public immutable BUFFER;
+    IPool         private immutable POOL;
+    PoolInfoUtils private immutable INFO;
+    Buffer        private immutable BUFFER;
+
     IVaultAuth    public immutable AUTH;
     uint8         public immutable assetDecimals;
     uint256       public immutable LP_DUST;
@@ -332,8 +333,6 @@ contract Vault is IVault, ERC4626 {
             removedCollateralValue += value;
             
             _wash(address(POOL), _fromIndex, colLps);
-            uint256 gemsToTransfer = AVL.convertWadToAsset(gems, ERC20(gem).decimals());
-            IERC20(gem).safeTransfer(msg.sender, gemsToTransfer);
 
             emit RecoverCollateral(msg.sender, _fromIndex, _amt, colLps, value);
         }

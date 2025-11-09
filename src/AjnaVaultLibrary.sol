@@ -7,7 +7,7 @@
 pragma solidity ^0.8.18;
 
 import {IVault} from "./interfaces/IVault.sol";
-import {ERC4626} from "./ERC4626.sol";
+import {ERC4626, ERC20} from "./ERC4626.sol";
 import {Vault} from "./Vault.sol";
 import {IVaultAuth} from "./interfaces/IVaultAuth.sol";
 import {IBuffer} from "./interfaces/IBuffer.sol";
@@ -117,6 +117,7 @@ library AjnaVaultLibrary {
         _gem = _pool.collateralAddress();
 
         (_gems, _colLps) = _pool.removeCollateral(_amt, _fromIndex);
+        _transferTokenFrom(_gem, address(this), msg.sender, _convertWadToAsset(_gems, ERC20(_gem).decimals()));
         _value = (_gems * _price) / WAD;
     }
 
