@@ -14,6 +14,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {Vault} from "../src/Vault.sol";
 import {Buffer} from "../src/Buffer.sol";
+import {IBuffer} from "../src/interfaces/IBuffer.sol";
 import {IVault} from "../src/interfaces/IVault.sol";
 import {VaultAuth, IVaultAuth} from "../src/VaultAuth.sol";
 import {ERC4626} from "../src/ERC4626.sol";
@@ -92,13 +93,13 @@ abstract contract VaultBaseTest is Test {
         vm.stopPrank();
     }
 
-    function _calculateBufferTarget(uint256 _totalAssets) internal pure returns (uint256) {
+    function _calculateBufferTarget(uint256 _totalAssets) internal view returns (uint256) {
         // TODO replace with the configurable buffer ratio when admin is added
-        return (_totalAssets * 1000) / 10000;
+        return (_totalAssets * auth.bufferRatio()) / 10000;
     }
 
-    function _calculatePoolTarget(uint256 _totalAssets) internal pure returns (uint256) {
+    function _calculatePoolTarget(uint256 _totalAssets) internal view returns (uint256) {
         // TODO replace with the configurable pool ratio when admin is added
-        return (_totalAssets * 9000) / 10000;
+        return (_totalAssets * (10000 - auth.bufferRatio())) / 10000;
     }
 }

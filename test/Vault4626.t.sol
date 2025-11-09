@@ -154,6 +154,26 @@ contract Vault4626Test is VaultBaseTest {
         console.log("vault.asset().balanceOf(address(vault))", IERC20(vault.asset()).balanceOf(address(vault)));
     }
 
+    function test_fail_withdraw_not_enough_assets() public {
+        uint256 assets = 100 * 10 ** vault.assetDecimals();
+        vm.prank(alice);
+        vault.deposit(assets, alice);
+        uint256 bufferAssets = IERC20(vault.asset()).balanceOf(vault.buffer());
+        assertEq(bufferAssets, assets, "Buffer should have assets from the deposit");
+
+        uint256 htpIndex = info.priceToIndex(info.htp(address(pool)));
+        uint256 targetForPool = _calculatePoolTarget(vault.totalAssets());
+        vm.prank(keeper);
+        vault.moveFromBuffer(htpIndex, targetForPool);
+
+        assertLt(Buffer(vault.buffer()).total(), 100 * WAD, "Buffer should have less assets after moving to buffer");
+
+        uint256 aliceMaxWithdraw = vault.maxWithdraw(alice);
+        vm.expectRevert(abi.encodeWithSelector(IBuffer.NotEnoughAssets.selector));
+        vm.prank(alice);
+        vault.withdraw(aliceMaxWithdraw, alice, alice);
+    }
+
     function test_redeem() public {
         uint256 assets = 100 * 10 ** vault.assetDecimals();
 
