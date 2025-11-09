@@ -10,6 +10,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IVaultAuth} from "./interfaces/IVaultAuth.sol";
 
 contract VaultAuth is IVaultAuth {
+    using SafeERC20 for IERC20;
+
     address public admin;
     address public swapper;
     mapping(address => bool) public keepers;
@@ -103,6 +105,6 @@ contract VaultAuth is IVaultAuth {
     }
     
     function retrieveFees(address token, uint256 amount) external onlyAdmin {
-        IERC20(token).transfer(admin, amount);
+        IERC20(token).safeTransfer(admin, amount);
     }
 }
