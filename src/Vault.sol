@@ -184,6 +184,9 @@ contract Vault is IVault, ERC4626 {
         
         // Send net assets to receiver
         _transferAssetFrom(address(this), receiver, assets);
+
+        // Emit with original asset amount in underlying decimals
+        emit Withdraw(msg.sender, receiver, owner, assets, shares);
         
         return shares;
     }
@@ -214,6 +217,9 @@ contract Vault is IVault, ERC4626 {
         
         // Send net assets to receiver
         _transferAssetFrom(address(this), receiver, assets);
+
+        // Emit with original asset amount in underlying decimals
+        emit Withdraw(msg.sender, receiver, owner, assets, shares);
         
         return assets;
     }
@@ -250,9 +256,6 @@ contract Vault is IVault, ERC4626 {
         // Move assets from the Buffer to the receiver
         (/* _assets */, uint256 _lps) = BUFFER.removeQuoteToken(wadAssets, 0);
         _wash(address(BUFFER), 0, _lps);
-
-        // Emit with original asset amount in underlying decimals
-        emit Withdraw(caller, receiver, owner, assets, shares);
     }
 
     // ADMIN AND KEEPER FUNCTIONS
