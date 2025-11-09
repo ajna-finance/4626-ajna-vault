@@ -102,8 +102,12 @@ library AjnaVaultLibrary {
         PoolInfoUtils _info,
         IPool _pool,
         uint256 _fromIndex,
-        uint256 _amt
-    ) external returns (uint256 _colLps, address _gem, uint256 _gems, uint256 _value) {
+        uint256 _amt,
+        mapping(uint256 => uint256) storage _lpsMap,
+        uint256[] storage _buckets,
+        mapping(uint256 => uint256) storage _bucketsIndex,
+        uint256 _lpDust
+    ) external returns (uint256 _colLps, uint256 _value) {
         _pool.updateInterest();
 
         (
@@ -114,9 +118,22 @@ library AjnaVaultLibrary {
             /* scale */,
             /* exchangeRate */
         ) = _info.bucketInfo(address(_pool), _fromIndex );
-        _gem = _pool.collateralAddress();
+        address _gem = _pool.collateralAddress();
 
+        uint256 _gems;
         (_gems, _colLps) = _pool.removeCollateral(_amt, _fromIndex);
+
+
+        _wash(
+            address(_pool),
+            _fromIndex,
+            _colLps,
+            _lpsMap,
+            _buckets,
+            _bucketsIndex,
+            _lpDust
+        );
+
         _transferTokenFrom(_gem, address(this), msg.sender, _convertWadToAsset(_gems, ERC20(_gem).decimals()));
         _value = (_gems * _price) / WAD;
     }
@@ -294,18 +311,31 @@ library AjnaVaultLibrary {
             afterLps = bufferLps_;
         } else {
             bufferLps_ = _bufferLps;
-            _lpsMap[_bucket] -= _lps;
-            afterLps = _lpsMap[_bucket];
-            if (afterLps == 0) {
-                uint256 removedIndex = _bucketsIndex[_bucket];
-                uint256 lastBucket = _buckets[_buckets.length - 1];
-                _buckets[removedIndex] = lastBucket;
-                _buckets.pop();
-                _bucketsIndex[lastBucket] = removedIndex;
-                delete _bucketsIndex[_bucket];
-            }
+            _wash(_pool, _bucket, _lps, _lpsMap, _buckets, _bucketsIndex, _lpDust);
         }
-        if (afterLps != 0 && afterLps < _lpDust) revert IVault.DustyBucket(_pool, _bucket);
+    }
+
+    function _wash(
+        address _pool,
+        uint256 _bucket,
+        uint256 _lps,
+        mapping(uint256 => uint256) storage _lpsMap,
+        uint256[] storage _buckets,
+        mapping(uint256 => uint256) storage _bucketsIndex,
+        uint256 _lpDust
+    ) internal {
+        _lpsMap[_bucket] -= _lps;
+        uint256 afterLps = _lpsMap[_bucket];
+        if (afterLps == 0) {
+            uint256 removedIndex = _bucketsIndex[_bucket];
+            uint256 lastBucket = _buckets[_buckets.length - 1];
+            _buckets[removedIndex] = lastBucket;
+            _buckets.pop();
+            _bucketsIndex[lastBucket] = removedIndex;
+            delete _bucketsIndex[_bucket];
+        } else if (afterLps < _lpDust) { // Not 0 so we need to check if it's dusty
+            revert IVault.DustyBucket(_pool, _bucket);
+        }
     }
 
     function _checkBufferRatio(

@@ -323,17 +323,19 @@ contract Vault is IVault, ERC4626 {
 
         for (uint256 i = 0; i < _fromIndexes.length; i++) {
             uint256 _fromIndex = _fromIndexes[i];
-            (uint256 colLps, address gem, uint256 gems, uint256 value) = AVL.recoverCollateral(
+            (uint256 colLps, uint256 value) = AVL.recoverCollateral(
                 INFO,
                 POOL,
                 _fromIndex,
-                _amt
+                _amt,
+                lps,
+                buckets,
+                bucketsIndex,
+                LP_DUST
             );
 
             removedCollateralValue += value;
             
-            _wash(address(POOL), _fromIndex, colLps);
-
             emit RecoverCollateral(msg.sender, _fromIndex, _amt, colLps, value);
         }
     }
