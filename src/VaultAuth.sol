@@ -19,51 +19,52 @@ contract VaultAuth is IVaultAuth {
     uint256 public toll; // deposit fee in basis points (e.g., 100 = 1%)
     uint256 public tax; // withdraw fee in basis points (e.g., 100 = 1%)
     uint256 public minBucketIndex; // minimum bucket index for keeper moves (0 = no restriction)
-    
+
     modifier onlyAdmin() {
         if (msg.sender != admin) revert NotAuthorized();
         _;
     }
-    
+
     constructor() {
         admin = msg.sender;
     }
-    
+
     function isAdmin(address account) external view returns (bool) {
         return account == admin;
     }
-    
+
     function isSwapper(address account) external view returns (bool) {
         return account == swapper;
     }
-    
+
     function isKeeper(address account) external view returns (bool) {
         return keepers[account];
     }
-    
+
     function isAdminOrKeeper(address account) external view returns (bool) {
         return account == admin || keepers[account];
     }
-    
+
     function isAdminOrSwapper(address account) external view returns (bool) {
         return account == admin || account == swapper;
     }
-    
+
     function setAdmin(address _admin) external onlyAdmin {
+        if (_admin == address(0)) revert ZeroAddress();
         admin = _admin;
         emit SetAdmin(_admin);
     }
-    
+
     function setSwapper(address _swapper) external onlyAdmin {
         swapper = _swapper;
         emit SetSwapper(_swapper);
     }
-    
+
     function setKeeper(address _keeper, bool _isKeeper) external onlyAdmin {
         keepers[_keeper] = _isKeeper;
         emit KeeperSet(_keeper, _isKeeper);
     }
-    
+
     function pause() external onlyAdmin {
         paused = true;
         emit Paused();
@@ -73,7 +74,7 @@ contract VaultAuth is IVaultAuth {
         paused = false;
         emit Unpaused();
     }
-    
+
     function setDepositCap(uint256 _depositCap) external onlyAdmin {
         depositCap = _depositCap;
         emit DepositCapSet(_depositCap);
@@ -101,7 +102,7 @@ contract VaultAuth is IVaultAuth {
         minBucketIndex = _minBucketIndex;
         emit MinBucketIndexSet(_minBucketIndex);
     }
-    
+
     function retrieveFees(address token, uint256 amount) external onlyAdmin {
         IERC20(token).transfer(admin, amount);
     }
