@@ -424,12 +424,16 @@ contract Vault is IVault, ERC4626 {
 
     function maxWithdraw(address owner) public view override returns (uint256) {
         if (_paused()) return 0;
-        return super.maxWithdraw(owner);
+        // The max the user can withdraw is the amount of assets
+        // they have in the vault limited by the value the buffer holds
+        return Maths.min(super.maxWithdraw(owner), BUFFER.total());
     }
 
     function maxRedeem(address owner) public view override returns (uint256) {
         if (_paused()) return 0;
-        return super.maxRedeem(owner);
+        // The max the user can redeem is the amount of shares
+        // they have in the vault limited by the value the buffer holds
+        return Maths.min(super.maxRedeem(owner), convertToShares(BUFFER.total()));
     }
 
     function previewDeposit(uint256 assets) public view override returns (uint256) {

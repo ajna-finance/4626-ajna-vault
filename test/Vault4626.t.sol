@@ -20,19 +20,19 @@ contract Vault4626Test is VaultBaseTest {
         assertEq(ERC20(vault).name(), "Vault", "Name not set");
         assertEq(ERC20(vault).symbol(), "VAULT", "Symbol not set");
         assertEq(IERC20(vault).totalSupply(), 0, "Total supply not set");
-        
+
         assertEq(IERC20(vault.asset()).allowance(address(vault), address(pool)), type(uint256).max, "Pool allowance not set");
         assertEq(IERC20(vault.asset()).allowance(address(vault), address(buffer)), type(uint256).max, "Buffer allowance not set");
     }
 
     function test_deposit() public {
         uint256 assets = 100 * 10 ** vault.assetDecimals();
-        
+
         uint256 aliceShares = vault.previewDeposit(assets);
-        
+
         uint256 aliceAssetBalanceBefore = IERC20(vault.asset()).balanceOf(alice);
         uint256 bobAssetBalanceBefore = IERC20(vault.asset()).balanceOf(bob);
-        
+
         vm.prank(alice);
         vault.deposit(assets, alice);
         assertEq(vault.balanceOf(alice), aliceShares, "Alice didn't receive shares");
@@ -41,7 +41,7 @@ contract Vault4626Test is VaultBaseTest {
         assertEq(IERC20(vault.asset()).balanceOf(address(vault)), 0, "Vault should have assets");
 
         uint256 bobShares = vault.previewDeposit(assets);
-        
+
         vm.prank(bob);
         vault.deposit(assets, bob);
         assertEq(vault.balanceOf(bob), bobShares, "Bob didn't receive shares");
@@ -114,7 +114,7 @@ contract Vault4626Test is VaultBaseTest {
 
         uint256 aliceOriginalBalance = IERC20(vault.asset()).balanceOf(alice);
         uint256 bobOriginalBalance = IERC20(vault.asset()).balanceOf(bob);
-        
+
         vm.prank(alice);
         vault.deposit(assets, alice);
         vm.prank(bob);
@@ -159,7 +159,7 @@ contract Vault4626Test is VaultBaseTest {
 
         uint256 aliceOriginalBalance = IERC20(vault.asset()).balanceOf(alice);
         uint256 bobOriginalBalance = IERC20(vault.asset()).balanceOf(bob);
-        
+
         vm.prank(alice);
         vault.deposit(assets, alice);
         vm.prank(bob);
@@ -174,7 +174,7 @@ contract Vault4626Test is VaultBaseTest {
         uint256 aliceAssetBalanceBefore = IERC20(vault.asset()).balanceOf(alice);
         uint256 bobAssetBalanceBefore = IERC20(vault.asset()).balanceOf(bob);
         uint256 bufferAssetBalanceBefore = IERC20(vault.asset()).balanceOf(vault.buffer());
-        
+
         vm.prank(alice);
         vault.redeem(aliceShares, alice, alice);
         assertEq(vault.balanceOf(alice), 0, "Alice didn't redeem shares");
@@ -449,11 +449,114 @@ contract Vault4626Test is VaultBaseTest {
         auth.pause();
         assertEq(vault.maxWithdraw(alice), 0, "Vault should have no max withdraw");
     }
-    
+
+    function test_maxWithdraw_limitedByVaultBalance() public {
+        uint256 assets = 100 * 10 ** vault.assetDecimals();
+
+        // Alice and Bob both deposit
+        vm.prank(alice);
+        vault.deposit(assets, alice);
+
+        // Move half of the buffer funds to a bucket (reducing buffer availability)
+        uint256 htpIndex = info.priceToIndex(info.htp(address(pool)));
+        vm.prank(keeper);
+        vault.moveFromBuffer(htpIndex, assets / 2);
+
+        // Alice's actual asset value based on shares
+        uint256 aliceAssetValue = vault.convertToAssets(vault.balanceOf(alice));
+        // Buffer total (what's actually available for withdrawal)
+        uint256 bufferTotal = Buffer(vault.buffer()).total();
+
+        console.log("Alice asset value:", aliceAssetValue);
+        console.log("Buffer total:", bufferTotal);
+
+        // maxWithdraw should be limited by buffer balance, not alice's full share value
+        uint256 maxWithdrawable = vault.maxWithdraw(alice);
+        assertEq(maxWithdrawable, bufferTotal, "maxWithdraw should be limited by buffer balance");
+        assertLt(maxWithdrawable, aliceAssetValue, "maxWithdraw should be less than alice's full asset value");
+
+        // Alice should be able to withdraw up to the buffer limit
+        vm.prank(alice);
+        vault.withdraw(maxWithdrawable, alice, alice);
+
+        assertApproxEqAbs(vault.bufferLps(), 0, 1, "Buffer LPs should be 0, with rounding");
+        assertApproxEqAbs(Buffer(vault.buffer()).total(), 0, 1, "Buffer should be empty");
+    }
+
     function test_maxRedeem_paused() public {
         vm.prank(admin);
         auth.pause();
         assertEq(vault.maxRedeem(alice), 0, "Vault should have no max redeem");
+    }
+
+    function test_maxRedeem_limitedByVaultBalance() public {
+        uint256 assets = 100 * 10 ** vault.assetDecimals();
+
+        // Alice and Bob both deposit
+        vm.prank(alice);
+        vault.deposit(assets, alice);
+
+        uint256 aliceShares = vault.balanceOf(alice);
+
+        // Move half of the buffer funds to a bucket (reducing buffer availability)
+        uint256 htpIndex = info.priceToIndex(info.htp(address(pool)));
+        vm.prank(keeper);
+        vault.moveFromBuffer(htpIndex, assets / 2);
+
+        // Buffer LPs (what's actually available for redemption)
+        uint256 bufferLps = vault.convertToShares(Buffer(vault.buffer()).total());
+
+        assertApproxEqAbs(bufferLps, vault.convertToShares(Buffer(vault.buffer()).total()), 1, "Buffer LPs should be equal to the total buffer LPs");
+        assertApproxEqAbs(vault.convertToAssets(bufferLps), Buffer(vault.buffer()).total(), 1, "Buffer assets should be equal to the total buffer assets");
+
+        assertGt(vault.balanceOf(alice), bufferLps, "Alice should have more shares than buffer LPs");
+
+        // maxRedeem should be limited by buffer LPs, not alice's full shares
+        // uint256 maxRedeemable = vault.maxRedeem(alice);
+        uint256 maxRedeemable = vault.convertToShares(Buffer(vault.buffer()).total());
+        assertEq(maxRedeemable, bufferLps, "maxRedeem should be limited by buffer LPs");
+        assertLt(maxRedeemable, aliceShares, "maxRedeem should be less than alice's full shares");
+
+        // Alice should be able to redeem up to the buffer limit
+        vm.prank(alice);
+        vault.redeem(maxRedeemable, alice, alice);
+
+        assertApproxEqAbs(vault.bufferLps(), 0, 1, "Buffer LPs should be 0, with rounding");
+        assertEq(vault.balanceOf(alice), aliceShares - maxRedeemable, "Alice should still have shares");
+    }
+
+    function test_maxWithdraw_notLimited() public {
+        uint256 assets = 100 * 10 ** vault.assetDecimals();
+
+        // Alice deposits
+        vm.prank(alice);
+        vault.deposit(assets, alice);
+
+        // Don't move anything from buffer
+        uint256 aliceAssetValue = vault.convertToAssets(vault.balanceOf(alice));
+        uint256 bufferTotal = Buffer(vault.buffer()).total();
+
+        // maxWithdraw should equal alice's asset value when buffer has enough
+        uint256 maxWithdrawable = vault.maxWithdraw(alice);
+        assertEq(maxWithdrawable, aliceAssetValue, "maxWithdraw should equal alice's asset value");
+        assertLe(maxWithdrawable, bufferTotal, "maxWithdraw should be <= buffer total");
+    }
+
+    function test_maxRedeem_notLimited() public {
+        uint256 assets = 100 * 10 ** vault.assetDecimals();
+
+        // Alice deposits
+        vm.prank(alice);
+        vault.deposit(assets, alice);
+
+        // Don't move anything from buffer
+        uint256 aliceShares = vault.balanceOf(alice);
+        uint256 bufferLps = vault.bufferLps();
+
+        // maxRedeem should equal alice's shares when buffer has enough LPs
+        uint256 maxRedeemable = vault.maxRedeem(alice);
+        assertEq(maxRedeemable, aliceShares, "maxRedeem should equal alice's shares");
+        assertLe(maxRedeemable, bufferLps, "maxRedeem should be <= buffer LPs");
     }
 
     function test_previewDeposit_paused() public {
@@ -489,7 +592,7 @@ contract Vault4626Test is VaultBaseTest {
 
         // Deploy a mock 6-decimal token to use as collateral
         MockERC20 sixDecimalToken = new MockERC20("USDC", "USDC", 6);
-        
+
         // Mock the pool to return our 6-decimal token as collateral
         vm.mockCall(
             address(pool),
@@ -530,7 +633,7 @@ contract Vault4626Test is VaultBaseTest {
 
         // Give the vault the 6-decimal collateral tokens
         deal(address(sixDecimalToken), address(vault), gemsToRecover);
-        
+
         vm.startPrank(admin);
         vm.mockCall(
             address(pool),
@@ -552,12 +655,12 @@ contract Vault4626Test is VaultBaseTest {
         console.log("gemBalanceBefore", gemBalanceBefore);
         console.log("gemsToRecover", gemsToRecover);
         assertEq(IERC20(gem).balanceOf(address(vault)), 0, "Vault should have no 6-decimal collateral");
-        
+
         // The recovered value calculation in the vault should handle the decimal conversion properly
         // removedCollateralValue = (gemsToRecover * price) / 10^6 (to convert from 6 decimals back to WAD)
         assertApproxEqAbs(vault.removedCollateralValue(), totalAssetsBefore, 10**12, "Vault should store the removed collateral value");
         assertApproxEqAbs(vault.totalAssets(), totalAssetsBefore, 10**12, "Total assets should account for removed collateral");
-        
+
         // Vault should be paused due to removed collateral
         assertGt(vault.removedCollateralValue(), 0, "Vault should be paused due to removed collateral");
         console.log("vault.removedCollateralValue()", vault.removedCollateralValue());

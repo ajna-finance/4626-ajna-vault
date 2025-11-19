@@ -120,7 +120,6 @@ library AjnaVaultLibrary {
         ) = _info.bucketInfo(address(_pool), _fromIndex );
         address _gem = _pool.collateralAddress();
 
-        uint256 _gems;
         (_gems, _colLps) = _pool.removeCollateral(_amt, _fromIndex);
 
 
