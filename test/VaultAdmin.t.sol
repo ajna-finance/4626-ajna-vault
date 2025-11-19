@@ -31,6 +31,12 @@ contract VaultAdminTest is VaultBaseTest {
         assertEq(auth.admin(), bob, "Admin not set");
     }
 
+    function test_fail_setAdmin_zeroAddress() public {
+        vm.expectRevert(abi.encodeWithSelector(IVaultAuth.ZeroAddress.selector));
+        vm.prank(admin);
+        auth.setAdmin(address(0));
+    }
+
     event SetSwapper(address indexed newSwapper);
 
     function test_setSwapper() public {
@@ -106,11 +112,11 @@ contract VaultAdminTest is VaultBaseTest {
         vm.prank(admin);
         auth.unpause();
         assertEq(auth.paused(), false, "Auth should be unpaused");
-        
+
         // Set removedCollateralValue > 0 to simulate recovery state
         vm.store(address(vault), bytes32(uint256(10)), bytes32(uint256(1)));
         assertEq(vault.removedCollateralValue(), 1, "Removed collateral value should be 1");
-        
+
         // Vault operations should still be paused due to removedCollateralValue > 0
         vm.expectRevert(abi.encodeWithSelector(IVault.VaultPaused.selector));
         vm.prank(alice);
@@ -123,13 +129,13 @@ contract VaultAdminTest is VaultBaseTest {
     function test_addKeeper() public {
         // Verify keeper is not initially set
         assertFalse(auth.keepers(alice), "Alice should not be a keeper initially");
-        
+
         // Admin adds keeper
         vm.expectEmit(true, true, true, true);
         emit KeeperSet(alice, true);
         vm.prank(admin);
         auth.setKeeper(alice, true);
-        
+
         // Verify keeper is now set
         assertTrue(auth.keepers(alice), "Alice should be a keeper after being added");
     }
@@ -139,13 +145,13 @@ contract VaultAdminTest is VaultBaseTest {
         vm.prank(admin);
         auth.setKeeper(alice, true);
         assertTrue(auth.keepers(alice), "Alice should be a keeper");
-        
+
         // Admin removes keeper
         vm.expectEmit(true, true, true, true);
         emit KeeperSet(alice, false);
         vm.prank(admin);
         auth.setKeeper(alice, false);
-        
+
         // Verify keeper is removed
         assertFalse(auth.keepers(alice), "Alice should not be a keeper after removal");
     }
@@ -156,7 +162,7 @@ contract VaultAdminTest is VaultBaseTest {
         auth.setKeeper(alice, true);
         auth.setKeeper(bob, true);
         vm.stopPrank();
-        
+
         // Verify all are keepers
         assertTrue(auth.keepers(alice), "Alice should be a keeper");
         assertTrue(auth.keepers(bob), "Bob should be a keeper");
@@ -169,11 +175,11 @@ contract VaultAdminTest is VaultBaseTest {
         auth.setKeeper(alice, true);
         auth.setKeeper(bob, true);
         vm.stopPrank();
-        
+
         // Remove only bob
         vm.prank(admin);
         auth.setKeeper(bob, false);
-        
+
         // Verify only bob is removed
         assertTrue(auth.keepers(alice), "Alice should still be a keeper");
         assertFalse(auth.keepers(bob), "Bob should not be a keeper after removal");
@@ -190,7 +196,7 @@ contract VaultAdminTest is VaultBaseTest {
         // First add keeper as admin
         vm.prank(admin);
         auth.setKeeper(alice, true);
-        
+
         // Try to remove as non-admin
         vm.expectRevert(abi.encodeWithSelector(IVaultAuth.NotAuthorized.selector));
         vm.prank(alice);
@@ -202,12 +208,12 @@ contract VaultAdminTest is VaultBaseTest {
         vm.prank(admin);
         auth.setKeeper(alice, true);
         assertTrue(auth.keepers(alice), "Alice should be a keeper");
-        
+
         // Remove keeper
         vm.prank(admin);
         auth.setKeeper(alice, false);
         assertFalse(auth.keepers(alice), "Alice should not be a keeper");
-        
+
         // Re-add keeper
         vm.prank(admin);
         auth.setKeeper(alice, true);
@@ -217,10 +223,10 @@ contract VaultAdminTest is VaultBaseTest {
     function test_removeNonexistentKeeper() public {
         // Try to remove keeper that was never added - should not revert
         assertFalse(auth.keepers(alice), "Alice should not be a keeper initially");
-        
+
         vm.prank(admin);
         auth.setKeeper(alice, false); // Should succeed even though alice was never a keeper
-        
+
         assertFalse(auth.keepers(alice), "Alice should still not be a keeper");
     }
 
@@ -229,21 +235,21 @@ contract VaultAdminTest is VaultBaseTest {
         // First generate some fees
         vm.prank(admin);
         auth.setToll(100); // 1%
-        
+
         uint256 depositAmount = 1000 ether;
         vm.prank(alice);
         vault.deposit(depositAmount, alice);
-        
+
         // Check AUTH has fees
         uint256 authBalance = IERC20(asset).balanceOf(address(auth));
         uint256 expectedFees = (depositAmount * 100) / 10000; // 1%
         assertEq(authBalance, expectedFees, "AUTH should have collected fees");
-        
+
         // Admin retrieves fees
         uint256 adminBalanceBefore = IERC20(asset).balanceOf(admin);
         vm.prank(admin);
         auth.retrieveFees(asset, authBalance);
-        
+
         // Check fees were transferred to admin
         assertEq(
             IERC20(asset).balanceOf(admin),
@@ -262,17 +268,17 @@ contract VaultAdminTest is VaultBaseTest {
         // Generate some fees first
         vm.prank(admin);
         auth.setTax(200); // 2%
-        
+
         uint256 depositAmount = 500 ether;
         vm.prank(alice);
         vault.deposit(depositAmount, alice);
-        
+
         uint256 withdrawAmount = 100 ether;
         vm.prank(alice);
         vault.withdraw(withdrawAmount, alice, alice);
-        
+
         uint256 authBalance = IERC20(asset).balanceOf(address(auth));
-        
+
         // Non-admin tries to retrieve fees
         vm.expectRevert(abi.encodeWithSelector(IVaultAuth.NotAuthorized.selector));
         vm.prank(alice);

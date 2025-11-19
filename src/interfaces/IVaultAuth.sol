@@ -11,7 +11,8 @@ interface IVaultAuth {
     error NotAuthorized();
     error BufferRatioTooHigh();
     error FeeTooHigh();
-    
+    error ZeroAddress();
+
     // EVENTS
     event SetAdmin(address indexed newAdmin);
     event SetSwapper(address indexed newSwapper);
@@ -23,7 +24,7 @@ interface IVaultAuth {
     event TollSet(uint256 newToll);
     event TaxSet(uint256 newTax);
     event MinBucketIndexSet(uint256 newMinBucketIndex);
-    
+
     function admin() external view returns (address);
     function swapper() external view returns (address);
     function keepers(address) external view returns (bool);
@@ -33,13 +34,13 @@ interface IVaultAuth {
     function toll() external view returns (uint256);
     function tax() external view returns (uint256);
     function minBucketIndex() external view returns (uint256);
-    
+
     function isAdmin(address account) external view returns (bool);
     function isSwapper(address account) external view returns (bool);
     function isKeeper(address account) external view returns (bool);
     function isAdminOrKeeper(address account) external view returns (bool);
     function isAdminOrSwapper(address account) external view returns (bool);
-    
+
     function setAdmin(address _admin) external;
     function setSwapper(address _swapper) external;
     function setKeeper(address _keeper, bool _isKeeper) external;
