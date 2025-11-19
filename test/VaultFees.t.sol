@@ -437,6 +437,45 @@ contract VaultFeesTest is VaultBaseTest {
         );
     }
 
+    function test_maxWithdrawWithTax() public {
+        // First deposit some assets
+        uint256 depositAmount = 1000 * 10 ** vault.assetDecimals();
+        vm.prank(alice);
+        vault.deposit(depositAmount, alice);
+        
+        // Set 3% tax
+        vm.prank(admin);
+        auth.setTax(300); // 3%
+        
+        uint256 authBalanceBefore = IERC20(vault.asset()).balanceOf(address(auth));
+        uint256 aliceBalanceBefore = IERC20(vault.asset()).balanceOf(alice);
+        
+        // Max Withdraw should pull all of alice's shares out respecting the tax
+        uint256 maxAssets = vault.maxWithdraw(alice);
+        
+        vm.prank(alice);
+        vault.withdraw(maxAssets, alice, alice);
+        
+        // Check shares match preview
+        assertEq(vault.balanceOf(alice), 0, "Alice should have no shares left");
+
+        uint256 expectedTax = (maxAssets * 300) / 10000; // 3%
+        
+        // Check alice received exact net amount requested
+        assertEq(
+            IERC20(vault.asset()).balanceOf(alice),
+            aliceBalanceBefore + maxAssets,
+            "Alice should receive exact withdrawal amount"
+        );
+        
+        // Check tax was sent to AUTH (calculate expected tax)
+        assertEq(
+            IERC20(vault.asset()).balanceOf(address(auth)),
+            authBalanceBefore + expectedTax,
+            "AUTH should receive tax"
+        );
+    }
+
     function test_redeemWithTax() public {
         // First deposit some assets
         uint256 depositAmount = 1000 * 10 ** vault.assetDecimals();
