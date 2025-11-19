@@ -299,7 +299,9 @@ contract Vault is IVault, ERC4626 {
         if (_newLps >= _lps) return;
 
         lps[_bucket] = _newLps;
-
+        if (_newLps == 0) {
+            AVL.removeBucket(buckets, bucketsIndex, _bucket);
+        }
         emit Drain(msg.sender, _bucket, _lps, _newLps);
     }
 
