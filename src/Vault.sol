@@ -21,24 +21,26 @@ import {IVaultAuth} from "./interfaces/IVaultAuth.sol";
 
 contract Vault is IVault, ERC4626 {
     using SafeERC20 for IERC20;
-    
+
     // CONSTANTS
-    uint256 public constant WAD = 1e18;
+    uint256 private constant WAD = 1e18;
 
     // IMMUTABLES
-    IPool         public immutable POOL;
-    PoolInfoUtils public immutable INFO;
-    Buffer        public immutable BUFFER;
+    IPool         private immutable POOL;
+    PoolInfoUtils private immutable INFO;
+    Buffer        private immutable BUFFER;
+
     IVaultAuth    public immutable AUTH;
     uint8         public immutable assetDecimals;
     uint256       public immutable LP_DUST;
-    
+
     // STATE VARIABLES
+    uint8 private bolt; // reentrancy lock: 0 = off, 1 = on
+
     uint256[]                   public buckets;
     mapping(uint256 => uint256) public bucketsIndex; // (bucketIndex => index location in buckets)
     uint256                     public bufferLps;
     mapping(uint256 => uint256) public lps; // (bucketIndex => lps)
-    uint8                       public bolt; // reentrancy lock: 0 = off, 1 = on
     uint256                     public removedCollateralValue;
 
     // MODIFIERS
@@ -95,7 +97,7 @@ contract Vault is IVault, ERC4626 {
         // To get the asset decimals, use the assetDecimals()
         return 18;
     }
-    
+
     /**
      * @notice Deposit assets into the vault
      * @param assets The amount of assets to deposit in underlying asset decimals
@@ -104,22 +106,22 @@ contract Vault is IVault, ERC4626 {
      */
     function deposit(uint256 assets, address receiver) public override lock notPaused returns (uint256) {
         POOL.updateInterest();
-        
+
         uint256 maxAssets = maxDeposit(receiver);
         if (assets > maxAssets) {
             revert ERC4626ExceededMaxDeposit(receiver, assets, maxAssets);
         }
- 
+
         // Transfer full amount from user
         _transferAssetFrom(msg.sender, address(this), assets);
-        
+
         // Calculate toll on the full assets amount
         (uint256 tollFee, uint256 netAssets) = _getFee(AUTH.toll(), assets);
-        
+
         _sendFee(tollFee);
 
         uint256 shares = super.previewDeposit(netAssets); // use super.previewDeposit to get the shares without the toll
-        
+
         // Deposit net assets after fee
         _deposit(msg.sender, receiver, netAssets, shares);
 
@@ -132,7 +134,7 @@ contract Vault is IVault, ERC4626 {
      * @param receiver The address to receive the shares
      * @return The amount of shares received
      */
-    function mint(uint256 shares, address receiver) public override lock notPaused returns (uint256) {    
+    function mint(uint256 shares, address receiver) public override lock notPaused returns (uint256) {
         POOL.updateInterest();
 
         uint256 maxShares = maxMint(receiver);
@@ -148,7 +150,7 @@ contract Vault is IVault, ERC4626 {
 
         // Transfer full amount from user (includes toll)
         _transferAssetFrom(msg.sender, address(this), assetsWithToll);
-        
+
         _sendFee(tollFee);
 
         _deposit(msg.sender, receiver, assets, shares);
@@ -165,12 +167,12 @@ contract Vault is IVault, ERC4626 {
      */
     function withdraw(uint256 assets, address receiver, address owner) public override lock notPaused returns (uint256) {
         POOL.updateInterest();
-        
+
         uint256 maxAssets = maxWithdraw(owner);
         if (assets > maxAssets) {
             revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
         }
-        
+
         // Calculate shares needed for assets (including tax)
         uint256 shares = previewWithdraw(assets);
 
@@ -179,12 +181,12 @@ contract Vault is IVault, ERC4626 {
 
         // Burn shares and withdraw gross assets
         _withdraw(msg.sender, receiver, owner, assets + taxFee, shares);
-        
+
         _sendFee(taxFee);
-        
+
         // Send net assets to receiver
         _transferAssetFrom(address(this), receiver, assets);
-        
+
         return shares;
     }
 
@@ -197,24 +199,24 @@ contract Vault is IVault, ERC4626 {
      */
     function redeem(uint256 shares, address receiver, address owner) public override lock notPaused returns (uint256) {
         POOL.updateInterest();
-        
+
         uint256 maxShares = maxRedeem(owner);
         if (shares > maxShares) {
             revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
         }
-        
+
         // Get gross assets for these shares
         uint256 grossAssets = super.previewRedeem(shares);
         (uint256 taxFee, uint256 assets) = _getFee(AUTH.tax(), grossAssets);
-        
+
         // Burn shares and withdraw gross assets
         _withdraw(msg.sender, receiver, owner, grossAssets, shares);
-        
+
         _sendFee(taxFee);
-        
+
         // Send net assets to receiver
         _transferAssetFrom(address(this), receiver, assets);
-        
+
         return assets;
     }
 
@@ -222,7 +224,7 @@ contract Vault is IVault, ERC4626 {
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         // Convert assets from underlying decimals to WAD for internal operations
         uint256 wadAssets = _convertAssetToWad(assets);
-        
+
         // Move assets to the Buffer
         (uint256 _lps, /* _assets */) = BUFFER.addQuoteToken(wadAssets, 0, block.timestamp);
 
@@ -271,8 +273,8 @@ contract Vault is IVault, ERC4626 {
         emit Move(msg.sender, address(POOL), _fromIndex, _toIndex, _wad);
     }
 
-    // KEEPER FUNCTIONS  
-    function moveFromBuffer(uint256 _toIndex, uint256 _wad) external lock notPaused {        
+    // KEEPER FUNCTIONS
+    function moveFromBuffer(uint256 _toIndex, uint256 _wad) external lock notPaused {
         (uint256 _fromLps, uint256 _toLps) = AVL.moveFromBuffer(
             INFO,
             AUTH,
@@ -316,23 +318,27 @@ contract Vault is IVault, ERC4626 {
     }
 
     // ADMIN and SWAPPER FUNCTIONS
-    function recoverCollateral(uint256 _fromIndex, uint256 _amt) external notPaused {
+    function recoverCollateral(uint256[] memory _fromIndexes, uint256 _amt) external {
         _onlyAdminOrSwapper();
+        if (AUTH.paused()) revert VaultPaused();
 
-        (uint256 colLps, address gem, uint256 gems, uint256 value) = AVL.recoverCollateral(
-            INFO,
-            POOL,
-            _fromIndex,
-            _amt
-        );
+        for (uint256 i = 0; i < _fromIndexes.length; i++) {
+            uint256 _fromIndex = _fromIndexes[i];
+            (uint256 colLps, uint256 value, uint256 gems) = AVL.recoverCollateral(
+                INFO,
+                POOL,
+                _fromIndex,
+                _amt,
+                lps,
+                buckets,
+                bucketsIndex,
+                LP_DUST
+            );
 
-        removedCollateralValue = value;
-        
-        _wash(address(POOL), _fromIndex, colLps);
-        uint256 gemsToTransfer = AVL.convertWadToAsset(gems, ERC20(gem).decimals());
-        IERC20(gem).safeTransfer(msg.sender, gemsToTransfer);
+            removedCollateralValue += value;
 
-        emit RecoverCollateral(msg.sender, _fromIndex, _amt, colLps, value);
+            emit RecoverCollateral(msg.sender, _fromIndex, gems, colLps, value);
+        }
     }
 
     function returnQuoteToken(uint256 _toIndex, uint256 _amt) external {
@@ -340,7 +346,7 @@ contract Vault is IVault, ERC4626 {
         _onlyAdminOrSwapper();
 
         removedCollateralValue = 0;
-        
+
         _transferAssetFrom(msg.sender, address(this), _convertWadToAsset(_amt));
 
         (uint256 _lps) = AVL.returnQuoteToken(INFO, POOL, AUTH, _toIndex, _amt);
@@ -401,13 +407,13 @@ contract Vault is IVault, ERC4626 {
 
     function maxDeposit(address receiver) public view override returns (uint256) {
         if (_paused()) return 0;
-        
+
         uint256 cap = AUTH.depositCap();
         if (cap == 0) return super.maxDeposit(receiver);
-        
+
         uint256 currentAssets = totalAssets();
         if (currentAssets >= cap) return 0;
-        
+
         uint256 maxByCapacity = cap - currentAssets;
         uint256 maxBySuper = super.maxDeposit(receiver);
         return maxByCapacity < maxBySuper ? maxByCapacity : maxBySuper;
@@ -415,7 +421,7 @@ contract Vault is IVault, ERC4626 {
 
     function maxMint(address receiver) public view override returns (uint256) {
         if (_paused()) return 0;
-        
+
         uint256 maxAssets = maxDeposit(receiver);
         // use super.previewDeposit to get the max shares without the toll
         return maxAssets == 0 ? 0 : super.previewDeposit(maxAssets);
@@ -423,44 +429,48 @@ contract Vault is IVault, ERC4626 {
 
     function maxWithdraw(address owner) public view override returns (uint256) {
         if (_paused()) return 0;
-        return super.maxWithdraw(owner);
+        // The max the user can withdraw is the amount of assets
+        // they have in the vault limited by the value the buffer holds
+        return Maths.min(super.maxWithdraw(owner), BUFFER.total());
     }
 
     function maxRedeem(address owner) public view override returns (uint256) {
         if (_paused()) return 0;
-        return super.maxRedeem(owner);
+        // The max the user can redeem is the amount of shares
+        // they have in the vault limited by the value the buffer holds
+        return Maths.min(super.maxRedeem(owner), _convertToShares(BUFFER.total(), Math.Rounding.Down));
     }
 
     function previewDeposit(uint256 assets) public view override returns (uint256) {
         if (_paused()) return 0;
-        
+
         (, uint256 netAssets) = _getFee(AUTH.toll(), assets);
-        
+
         return super.previewDeposit(netAssets);
     }
-    
+
     function previewMint(uint256 shares) public view override returns (uint256) {
         if (_paused()) return 0;
-        
+
         uint256 assetsWithToll = _getAssetsWithFee(AUTH.toll(), super.previewMint(shares));
-        
+
         return assetsWithToll;
     }
-    
+
     function previewWithdraw(uint256 assets) public view override returns (uint256) {
         if (_paused()) return 0;
-        
+
         uint256 grossAssets = _getAssetsWithFee(AUTH.tax(), assets);
-        
+
         return super.previewWithdraw(grossAssets);
     }
-    
+
     function previewRedeem(uint256 shares) public view override returns (uint256) {
         if (_paused()) return 0;
-        
+
         uint256 grossAssets = super.previewRedeem(shares);
         (, uint256 netAssets) = _getFee(AUTH.tax(), grossAssets);
-        
+
         return netAssets;
     }
 

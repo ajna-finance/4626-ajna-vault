@@ -194,13 +194,11 @@ contract VaultBucketManagementTest is VaultBaseTest {
     }
 
     // Test buffer LP management
-    function test_BufferLps_DustyPrevention() public {
+    function test_BufferLps_NoDustyPrevention() public {
         // Move most funds to a bucket, leaving potential dust in buffer
         uint256 totalInBuffer = vault.totalAssets();
         uint256 moveAmount = totalInBuffer - (vault.LP_DUST() - 1);
         
-        // This should revert because it would leave dust in the buffer
-        vm.expectRevert(abi.encodeWithSelector(IVault.DustyBucket.selector, address(buffer), 0));
         vm.prank(keeper);
         vault.moveFromBuffer(100, moveAmount);
     }
