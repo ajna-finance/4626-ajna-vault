@@ -485,7 +485,7 @@ contract Vault is IVault, ERC4626 {
     }
 
     function _sendFee(uint256 _fee) internal {
-        IERC20(asset()).safeTransfer(address(AUTH), _fee);
+        if(_fee > 0) IERC20(asset()).safeTransfer(address(AUTH), _fee);
     }
 
     function _getFee(uint256 _fee, uint256 _assets) internal pure returns (uint256 feeAmt, uint256 netAmt) {
