@@ -31,13 +31,12 @@ library AjnaVaultLibrary {
         uint256 _toIndex,
         uint256 _wad,
         IVaultAuth _auth
-    ) external returns (uint256 _fromLps, uint256 _toLps) {
+    ) external returns (uint256 _fromLps, uint256 _toLps, uint256 _assets) {
         if (!_auth.isAdminOrKeeper(msg.sender)) revert IVault.NotAuthorized();
         _pool.updateInterest();
 
         _validDestination(_info, _pool, _toIndex, _auth);
 
-        uint256 _assets;
         (_fromLps, _toLps, _assets) = _pool.moveQuoteToken(
             _wad,
             _fromIndex,
@@ -79,7 +78,7 @@ library AjnaVaultLibrary {
         Buffer _buffer,
         uint256 _fromIndex,
         uint256 _wad
-    ) external returns (uint256 _fromLps, uint256 _toLps) {
+    ) external returns (uint256 _fromLps, uint256 _toLps, uint256 _assets) {
         if (!_auth.isAdminOrKeeper(msg.sender)) revert IVault.NotAuthorized();
         _pool.updateInterest();
 
@@ -92,7 +91,6 @@ library AjnaVaultLibrary {
             _convertAssetToWad(_vault.totalAssets(), _vault.assetDecimals())
         );
 
-        uint256 _assets;
         (_assets, _fromLps) = _pool.removeQuoteToken(_wad, _fromIndex);
 
         (_toLps, _assets) = _buffer.addQuoteToken(_assets, 0, block.timestamp);
