@@ -28,7 +28,7 @@ interface IVault {
     event MoveToBuffer(address indexed caller, address indexed pool, uint256 bucket, uint256 amount);
     event Move(address indexed caller, address indexed pool, uint256 fromBucket, uint256 toBucket, uint256 amount);
     event SetAdmin(address indexed newAdmin);
-    event RecoverCollateral(address indexed caller, uint256 bucket, uint256 amount, uint256 lps, uint256 value);
+    event RecoverCollateral(address indexed caller, uint256 bucket, uint256 amount, uint256 lps, uint256 value, uint256 gems);
     event ReturnQuoteToken(address indexed caller, uint256 bucket, uint256 amount, uint256 lps);
     event SetSwapper(address indexed newSwapper);
     event KeeperSet(address indexed keeper, bool isKeeper);

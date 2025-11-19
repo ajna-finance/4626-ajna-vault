@@ -19,7 +19,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-library AjnaVaultLibrary { 
+library AjnaVaultLibrary {
     using SafeERC20 for IERC20;
 
     uint256 public constant WAD = 1e18;
@@ -69,7 +69,7 @@ library AjnaVaultLibrary {
 
         uint256 _assets;
         (_assets, _fromLps) = _buffer.removeQuoteToken(_wad, 0);
-        
+
         (_toLps, _assets) = _pool.addQuoteToken(_assets, _toIndex, block.timestamp);
     }
 
@@ -88,7 +88,7 @@ library AjnaVaultLibrary {
             _auth,
             _buffer,
             true,
-            _wad, 
+            _wad,
             _convertAssetToWad(_vault.totalAssets(), _vault.assetDecimals())
         );
 
@@ -107,7 +107,7 @@ library AjnaVaultLibrary {
         uint256[] storage _buckets,
         mapping(uint256 => uint256) storage _bucketsIndex,
         uint256 _lpDust
-    ) external returns (uint256 _colLps, uint256 _value) {
+    ) external returns (uint256 _colLps, uint256 _value, uint256 _gems) {
         _pool.updateInterest();
 
         (
@@ -347,10 +347,10 @@ library AjnaVaultLibrary {
     ) internal view {
         uint256 ratio = _auth.bufferRatio();
         if (ratio == 0) return; // No ratio set, allow any movement
-        
+
         uint256 currentBufferValue = _buffer.total();
         uint256 targetBufferAmount = (_totalWadAssets * ratio) / 10000;
-        
+
         if (_isMovingToBuffer) {
             // Moving to buffer: check if we would exceed target
             if (targetBufferAmount < currentBufferValue + _wadToMove) {
@@ -374,7 +374,7 @@ library AjnaVaultLibrary {
         if (_bucketLP != 0 && _bucketLP <= 1_000_000) {
             revert IVault.BucketLPDangerous(address(_pool), _bucket, _bucketLP);
         }
-        
+
         // Check minimum bucket index restriction (0 = no restriction)
         uint256 minBucketIndex = _auth.minBucketIndex();
         if (minBucketIndex > 0 && _bucket < minBucketIndex) {
