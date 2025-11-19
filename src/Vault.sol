@@ -492,7 +492,7 @@ contract Vault is IVault, ERC4626 {
     }
 
     function _getFee(uint256 _fee, uint256 _assets) internal pure returns (uint256 feeAmt, uint256 netAmt) {
-        feeAmt = (_fee * _assets) / 10000;
+        feeAmt = Math.ceilDiv((_fee * _assets), 10000);
         netAmt = _assets - feeAmt;
     }
 
