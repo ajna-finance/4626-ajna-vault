@@ -336,7 +336,7 @@ contract Vault is IVault, ERC4626 {
 
             removedCollateralValue += value;
 
-            emit RecoverCollateral(msg.sender, _fromIndex, _amt, colLps, value, gems);
+            emit RecoverCollateral(msg.sender, _fromIndex, gems, colLps, value);
         }
     }
 
