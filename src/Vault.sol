@@ -23,7 +23,7 @@ contract Vault is IVault, ERC4626 {
     using SafeERC20 for IERC20;
 
     // CONSTANTS
-    uint256 public constant WAD = 1e18;
+    uint256 private constant WAD = 1e18;
 
     // IMMUTABLES
     IPool         private immutable POOL;
@@ -35,11 +35,12 @@ contract Vault is IVault, ERC4626 {
     uint256       public immutable LP_DUST;
 
     // STATE VARIABLES
+    uint8 private bolt; // reentrancy lock: 0 = off, 1 = on
+
     uint256[]                   public buckets;
     mapping(uint256 => uint256) public bucketsIndex; // (bucketIndex => index location in buckets)
     uint256                     public bufferLps;
     mapping(uint256 => uint256) public lps; // (bucketIndex => lps)
-    uint8                       public bolt; // reentrancy lock: 0 = off, 1 = on
     uint256                     public removedCollateralValue;
 
     // MODIFIERS
@@ -433,7 +434,7 @@ contract Vault is IVault, ERC4626 {
         if (_paused()) return 0;
         // The max the user can redeem is the amount of shares
         // they have in the vault limited by the value the buffer holds
-        return Maths.min(super.maxRedeem(owner), convertToShares(BUFFER.total()));
+        return Maths.min(super.maxRedeem(owner), _convertToShares(BUFFER.total(), Math.Rounding.Down));
     }
 
     function previewDeposit(uint256 assets) public view override returns (uint256) {

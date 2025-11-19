@@ -512,8 +512,7 @@ contract Vault4626Test is VaultBaseTest {
         assertGt(vault.balanceOf(alice), bufferLps, "Alice should have more shares than buffer LPs");
 
         // maxRedeem should be limited by buffer LPs, not alice's full shares
-        // uint256 maxRedeemable = vault.maxRedeem(alice);
-        uint256 maxRedeemable = vault.convertToShares(Buffer(vault.buffer()).total());
+        uint256 maxRedeemable = vault.maxRedeem(alice);
         assertEq(maxRedeemable, bufferLps, "maxRedeem should be limited by buffer LPs");
         assertLt(maxRedeemable, aliceShares, "maxRedeem should be less than alice's full shares");
 
