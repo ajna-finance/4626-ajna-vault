@@ -52,7 +52,9 @@ contract VaultRecoverCollateralTest is VaultBaseTest {
 
         uint256[] memory indexes = new uint256[](1);
         indexes[0] = bucketIndex;
-        vault.recoverCollateral(indexes, params.gems);
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = params.gems;
+        vault.recoverCollateral(indexes, amounts);
         vm.stopPrank();
     }
 
@@ -72,7 +74,10 @@ contract VaultRecoverCollateralTest is VaultBaseTest {
         uint256[] memory indexes = new uint256[](2);
         indexes[0] = bucket1;
         indexes[1] = bucket2;
-        vault.recoverCollateral(indexes, params1.gems);
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = params1.gems;
+        amounts[1] = params2.gems;
+        vault.recoverCollateral(indexes, amounts);
         vm.stopPrank();
     }
 
@@ -180,6 +185,7 @@ contract VaultRecoverCollateralTest is VaultBaseTest {
     }
 
     function test_endToEnd_recoverAndReturn_multipleBuckets() public {
+        pool.updateInterest();
         uint256 wadAssets1 = 100 * WAD;
         uint256 wadAssets2 = 150 * WAD;
         uint256 htpIndex = info.priceToIndex(info.htp(address(pool)));
@@ -229,7 +235,9 @@ contract VaultRecoverCollateralTest is VaultBaseTest {
         vm.prank(admin);
         uint256[] memory indexes = new uint256[](1);
         indexes[0] = htpIndex;
-        vault.recoverCollateral(indexes, 100);
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 100;
+        vault.recoverCollateral(indexes, amounts);
     }
 
     function test_recoverCollateral_whenPaused_byRemovedCollateral() public {
@@ -271,7 +279,9 @@ contract VaultRecoverCollateralTest is VaultBaseTest {
         vm.prank(admin);
         uint256[] memory indexes = new uint256[](1);
         indexes[0] = htpIndex;
-        vault.recoverCollateral(indexes, 100);
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 100;
+        vault.recoverCollateral(indexes, amounts);
 
         vm.prank(admin);
         auth.unpause();
@@ -291,7 +301,8 @@ contract VaultRecoverCollateralTest is VaultBaseTest {
 
         vm.prank(admin);
         uint256[] memory indexes = new uint256[](0);
-        vault.recoverCollateral(indexes, 100);
+        uint256[] memory amounts = new uint256[](0);
+        vault.recoverCollateral(indexes, amounts);
 
         assertEq(vault.removedCollateralValue(), removedValueBefore, "Removed collateral value should not change");
         assertFalse(vault.paused(), "Vault should not be paused");

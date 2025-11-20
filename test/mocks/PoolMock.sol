@@ -21,10 +21,10 @@ contract PoolMock {
     address public immutable quoteTokenAddress;
     address public immutable collateralAddress;
     uint256 public total; // Assets
-    uint256 public fee;    
+    uint256 public fee;
     uint8   public immutable assetDecimals;
     uint256 public lastInterestUpdate;
-    
+
     // Per-bucket LP tracking
     mapping(uint256 => uint256) public bucketLps; // bucket => LP amount
     mapping(uint256 => uint256) public bucketAssets; // bucket => asset amount
@@ -54,14 +54,14 @@ contract PoolMock {
         uint256 /* _expiry */
     ) external returns (uint256, uint256) {
         updateInterest();
-        
+
         // Calculate LP tokens to award
         uint256 _sip = (bucketLps[_bucket] > 0) ? (_wad * bucketLps[_bucket]) / bucketAssets[_bucket] : _wad;
-        
+
         // Apply deposit fee
         uint256 _fee = (_wad * 10) / 10000;
         uint256 assetsAfterFee = _wad - _fee;
-        
+
         // Update tracking
         bucketLps[_bucket] += _sip;
         bucketAssets[_bucket] += assetsAfterFee;
@@ -78,32 +78,32 @@ contract PoolMock {
         uint256 _bucket
     ) external returns (uint256, uint256) {
         updateInterest();
-        
+
         // Handle edge case where total is 0 or bucket has no assets
         if (total == 0 || bucketAssets[_bucket] == 0) {
             return (0, 0);
         }
-        
+
         // Calculate how much we can actually remove (limited by what's in the bucket)
         uint256 assetsToRemove = _wad;
         if (assetsToRemove > bucketAssets[_bucket]) {
             assetsToRemove = bucketAssets[_bucket];
         }
-        
+
         // Calculate LPs to burn proportionally: (LPs * assetsToRemove) / totalAssetsInBucket
         uint256 _burnLps = (bucketLps[_bucket] * assetsToRemove) / bucketAssets[_bucket];
-        
+
         // Update bucket tracking
         bucketLps[_bucket] -= _burnLps;
         bucketAssets[_bucket] -= assetsToRemove;
-        
+
         // Update global tracking
         if (total >= assetsToRemove) {
             total -= assetsToRemove;
         } else {
             total = 0;
         }
-        
+
         uint256 _transferAmt = (assetsToRemove * (10**assetDecimals)) / WAD;
         IERC20(quoteTokenAddress).safeTransfer(msg.sender, _transferAmt);
         return (assetsToRemove, _burnLps);
@@ -116,36 +116,36 @@ contract PoolMock {
         uint256 /* _expiry */
     ) external returns (uint256, uint256, uint256) {
         updateInterest();
-        
+
         // Remove from source bucket
         if (bucketAssets[_fromBucket] == 0) {
             return (0, 0, 0);
         }
-        
+
         uint256 assetsToMove = _wad;
         if (assetsToMove > bucketAssets[_fromBucket]) {
             assetsToMove = bucketAssets[_fromBucket];
         }
-        
+
         uint256 fromLpsToRemove = (bucketLps[_fromBucket] * assetsToMove) / bucketAssets[_fromBucket];
-        
+
         // Update from bucket
         bucketLps[_fromBucket] -= fromLpsToRemove;
         bucketAssets[_fromBucket] -= assetsToMove;
-        
+
         // For moves from lower to higher bucket indices, apply fee (like deposit)
         uint256 actualAssetsAfterFee = assetsToMove;
         if (_fromBucket < _toBucket) {
-            uint256 moveFee = (assetsToMove * 10) / 10000; // 0.1% fee  
+            uint256 moveFee = (assetsToMove * 10) / 10000; // 0.1% fee
             actualAssetsAfterFee = assetsToMove - moveFee;
             fee += moveFee;
         }
-        
-        // Add to destination bucket 
+
+        // Add to destination bucket
         uint256 toLps = (bucketLps[_toBucket] > 0) ? (actualAssetsAfterFee * RAY) / ((total * RAY) / bucketLps[_toBucket]) : actualAssetsAfterFee;
         bucketLps[_toBucket] += toLps;
         bucketAssets[_toBucket] += actualAssetsAfterFee;
-        
+
         return (fromLpsToRemove, toLps, actualAssetsAfterFee);
     }
 
@@ -154,7 +154,7 @@ contract PoolMock {
         return (_amount, _amount);
     }
 
-    function lenderInfo(uint256 _bucket, address _vault) external view returns (uint256, uint256) {
+    function lenderInfo(uint256 _bucket, address /* _vault */) external view returns (uint256, uint256) {
         return (bucketLps[_bucket], 0);
     }
 

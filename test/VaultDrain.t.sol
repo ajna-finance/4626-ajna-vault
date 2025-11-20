@@ -206,7 +206,7 @@ contract VaultDrainTest is VaultBaseTest {
         assertEq(buckets.length, 1, "Should have 1 bucket");
         assertEq(buckets[0], 4000, "Bucket should be in buckets");
         assertEq(vault.bucketsIndex(4000), 0, "Bucket index should be removed from buckets index");
-        
+
         // Call drain
         vm.expectEmit(true, true, true, true);
         emit Drain(admin, 4000, originalLps, 0);
@@ -316,8 +316,6 @@ contract VaultDrainTest is VaultBaseTest {
         // Calculate new LPs based on reduction percentage
         uint256 newLps = (originalLps * (100 - _reductionPercent)) / 100;
         _mockLenderInfo(4000, newLps);
-
-        uint256 originalTotalAssets = vault.totalAssets();
 
         if (newLps < originalLps) {
             // Should emit drain event

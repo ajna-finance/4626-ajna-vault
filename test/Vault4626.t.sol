@@ -296,7 +296,9 @@ contract Vault4626Test is VaultBaseTest {
         );
         uint256[] memory indexes = new uint256[](1);
         indexes[0] = htpIndex;
-        vault.recoverCollateral(indexes, gemsToRecover);
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = gemsToRecover;
+        vault.recoverCollateral(indexes, amounts);
         vm.stopPrank();
 
         assertEq(IERC20(gem).balanceOf(admin), gemBalanceBefore + gemsToRecover, "Admin didn't receive assets");
@@ -388,7 +390,9 @@ contract Vault4626Test is VaultBaseTest {
         );
         uint256[] memory indexes = new uint256[](1);
         indexes[0] = htpIndex;
-        vault.recoverCollateral(indexes, gemsToRecover);
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = gemsToRecover;
+        vault.recoverCollateral(indexes, amounts);
         vm.stopPrank();
 
         assertEq(IERC20(gem).balanceOf(swapper), gemBalanceBefore + gemsToRecover, "Swapper didn't receive assets");
@@ -443,7 +447,9 @@ contract Vault4626Test is VaultBaseTest {
         vm.prank(alice);
         uint256[] memory indexes = new uint256[](1);
         indexes[0] = 0;
-        vault.recoverCollateral(indexes, 0);
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 0;
+        vault.recoverCollateral(indexes, amounts);
     }
 
     function test_failReturnQuoteTokenNotAdmin() public {
@@ -739,7 +745,9 @@ contract Vault4626Test is VaultBaseTest {
         );
         uint256[] memory indexes = new uint256[](1);
         indexes[0] = htpIndex;
-        vault.recoverCollateral(indexes, collateralWad);
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = collateralWad;
+        vault.recoverCollateral(indexes, amounts);
         vm.stopPrank();
 
         assertEq(IERC20(gem).balanceOf(admin), gemBalanceBefore + gemsToRecover, "Admin didn't receive 6-decimal collateral");

@@ -5,7 +5,7 @@
 // for any damages arising from or relating to the Software or use.
 pragma solidity ^0.8.18;
 
-// Proof of concept and bug identified by 
+// Proof of concept and bug identified by
 // https://github.com/imbaniac
 
 import {Test, console} from "forge-std/Test.sol";
@@ -188,7 +188,7 @@ contract VaultShareDecimalsBugProof is Test {
     /**
      * @notice Shows the formula breakdown
      */
-    function test_BugProof_FormulaBreakdown() public view {
+    function test_BugProof_FormulaBreakdown() public pure {
         console.log("========================================");
         console.log("ERC4626 FORMULA BREAKDOWN");
         console.log("========================================");
