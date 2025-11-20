@@ -320,7 +320,7 @@ contract Vault is IVault, ERC4626 {
         emit MoveToBuffer(msg.sender, address(POOL), _fromIndex, _assets);
     }
 
-    function recoverCollateral(uint256[] memory _fromIndexes, uint256 _amt) external {
+    function recoverCollateral(uint256[] memory _fromIndexes, uint256[] memory _amts) external {
         _onlyAdminOrSwapper();
         if (AUTH.paused()) revert VaultPaused();
 
@@ -330,7 +330,7 @@ contract Vault is IVault, ERC4626 {
                 INFO,
                 POOL,
                 _fromIndex,
-                _amt,
+                _amts[i],
                 lps,
                 buckets,
                 bucketsIndex,
