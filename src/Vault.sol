@@ -433,7 +433,7 @@ contract Vault is IVault, ERC4626 {
         if (_paused()) return 0;
         // The max the user can withdraw is the amount of assets
         // they have in the vault limited by the value the buffer holds
-        uint256 maxAssets = Maths.min(super.maxWithdraw(owner), BUFFER.total());
+        uint256 maxAssets = Maths.min(super.maxWithdraw(owner), _convertWadToAsset(BUFFER.total()));
         (,netAssets) = _getFee(AUTH.tax(), maxAssets);
     }
 
@@ -441,7 +441,7 @@ contract Vault is IVault, ERC4626 {
         if (_paused()) return 0;
         // The max the user can redeem is the amount of shares
         // they have in the vault limited by the value the buffer holds
-        return Maths.min(super.maxRedeem(owner), _convertToShares(BUFFER.total(), Math.Rounding.Down));
+        return Maths.min(super.maxRedeem(owner), _convertToShares(_convertWadToAsset(BUFFER.total()), Math.Rounding.Down));
     }
 
     function previewDeposit(uint256 assets) public view override returns (uint256) {

@@ -544,6 +544,77 @@ contract Vault4626Test is VaultBaseTest {
         assertEq(vault.balanceOf(alice), aliceShares - maxRedeemable, "Alice should still have shares");
     }
 
+    function test_maxWithdraw_and_maxRedeem_6DecimalAsset() public {
+        // Only run when not connected to ETH RPC (using mocks)
+        if (liveFork) {
+            console.log("Skipping 6-decimal test - Live fork is enabled");
+            return;
+        }
+
+        // Deploy a mock 6-decimal quote token (like USDC)
+        MockERC20 sixDecimalToken = new MockERC20("USDC", "USDC", 6);
+
+        // Deploy a new pool mock with 6-decimal quote token
+        PoolMock mockPool = new PoolMock(address(sixDecimalToken), address(0));
+
+        // Deploy new vault with 6-decimal asset
+        Vault vault6 = new Vault(IPool(address(mockPool)), address(info), IERC20(address(sixDecimalToken)), "Vault6", "V6", IVaultAuth(address(auth)));
+
+        // Setup alice with 6-decimal tokens
+        deal(address(sixDecimalToken), alice, 1000 * 10**6); // 1000 USDC
+        vm.prank(alice);
+        sixDecimalToken.approve(address(vault6), type(uint256).max);
+
+        // Alice deposits 100 USDC (6 decimals)
+        uint256 assets = 100 * 10**6;
+        vm.prank(alice);
+        vault6.deposit(assets, alice);
+
+        uint256 aliceShares = vault6.balanceOf(alice);
+        console.log("Alice shares (18 decimals):", aliceShares);
+        console.log("Alice assets deposited (6 decimals):", assets);
+
+        // Move 50 WAD from buffer to pool (buffer works in WAD internally)
+        uint256 htpIndex = info.priceToIndex(info.htp(address(mockPool)));
+        vm.prank(keeper);
+        vault6.moveFromBuffer(htpIndex, 50 * WAD);
+
+        // Buffer.total() returns WAD (18 decimals), but vault has 6-decimal asset
+        uint256 bufferTotalWad = Buffer(vault6.buffer()).total();
+        console.log("Buffer total (WAD - 18 decimals):", bufferTotalWad);
+        console.log("Buffer total should be ~50 WAD:", bufferTotalWad / 1e18);
+
+        // maxWithdraw should convert from WAD to 6 decimals properly
+        uint256 maxWithdrawable = vault6.maxWithdraw(alice);
+        console.log("maxWithdraw (6 decimals):", maxWithdrawable);
+
+        // maxWithdraw should be in 6 decimals (50 USDC worth after WAD conversion)
+        // Buffer has 50 WAD, which should convert to exactly 50 * 10**6 in 6-decimal assets
+        assertEq(maxWithdrawable, 50 * 10**6, "maxWithdraw should be exactly 50 USDC (WAD converted to 6 decimals)");
+
+        // maxRedeem should work similarly - convert buffer total from WAD to assets, then to shares
+        uint256 maxRedeemable = vault6.maxRedeem(alice);
+        console.log("maxRedeem (18 decimal shares):", maxRedeemable);
+
+        // Convert maxRedeem shares to assets and compare with maxWithdraw
+        uint256 maxRedeemAssets = vault6.previewRedeem(maxRedeemable);
+        console.log("maxRedeem in assets (6 decimals):", maxRedeemAssets);
+
+        // They should be approximately equal (within rounding)
+        assertApproxEqAbs(maxRedeemAssets, maxWithdrawable, 10, "maxRedeem assets should match maxWithdraw");
+
+        // Verify Alice can actually withdraw the max amount
+        uint256 aliceBalanceBefore = sixDecimalToken.balanceOf(alice);
+        vm.prank(alice);
+        vault6.withdraw(maxWithdrawable, alice, alice);
+        uint256 aliceBalanceAfter = sixDecimalToken.balanceOf(alice);
+
+        assertEq(aliceBalanceAfter - aliceBalanceBefore, maxWithdrawable, "Alice should receive maxWithdraw amount in 6 decimals");
+
+        // Buffer should be nearly drained (in WAD)
+        assertLt(Buffer(vault6.buffer()).total(), 100, "Buffer should be nearly empty");
+    }
+
     function test_maxWithdraw_notLimited() public {
         uint256 assets = 100 * 10 ** vault.assetDecimals();
 
