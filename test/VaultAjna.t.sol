@@ -120,14 +120,14 @@ contract VaultAjnaTest is VaultBaseTest {
             assertEq(aliceValueAfterBobMove, aliceValueAfterInterest - alicesShareOfFee, "Alice's value didn't decrease by share of Bob's move fee");
         }
         uint256 totalAssetsBeforeInterest = vault.totalAssets();
-        
+
         vm.warp(block.timestamp + warpTime);
         pool.updateInterest();
 
         {
             assertGt(vault.totalAssets(), totalAssetsBeforeInterest, "Total assets didn't increase with interest");
             uint256 earnedInterest = vault.totalAssets() - totalAssetsBeforeInterest;
-            
+
             assertGt(vault.convertToAssets(vault.balanceOf(bob)), bobValueAfterMove, "Bob's value didn't increase due to interest");
             assertApproxEqAbs(vault.convertToAssets(vault.balanceOf(bob)) - bobValueAfterMove, ((earnedInterest * vault.balanceOf(bob)) / vault.totalSupply()), 1, "Bob's earned interest didn't match his share of the total earned interest");
 
@@ -137,17 +137,24 @@ contract VaultAjnaTest is VaultBaseTest {
     }
 
     function test_moveToBuffer() public onlyLiveFork {
+        pool.updateInterest();
+
+        uint256 newRatio = 1000; // 10%
+        vm.prank(admin);
+        auth.setBufferRatio(newRatio);
+
         uint256 wadAssets = 100 * WAD;
         uint256 warpTime = 14 days;
-        
+
         vm.prank(alice);
         vault.deposit(wadAssets, alice);
 
         uint256 htpIndex = info.priceToIndex(info.htp(address(pool)));
 
         // Move 90% of the deposit from the pool to the buffer
-        vm.prank(keeper);
+        vm.startPrank(keeper);
         vault.moveFromBuffer(htpIndex, _calculatePoolTarget(wadAssets));
+        vm.stopPrank();
 
         vm.warp(block.timestamp + warpTime);
         pool.updateInterest();
@@ -217,8 +224,9 @@ contract VaultAjnaTest is VaultBaseTest {
         uint256 htpIndex = info.priceToIndex(info.htp(address(pool)));
         uint256 lupIndex = info.priceToIndex(info.lup(address(pool)));
 
-        vm.prank(keeper);
+        vm.startPrank(keeper);
         vault.moveFromBuffer(lupIndex, _calculatePoolTarget(wadAssets));
+        vm.stopPrank();
 
         vm.warp(block.timestamp + warpTime);
         pool.updateInterest();
@@ -276,17 +284,17 @@ contract VaultAjnaTest is VaultBaseTest {
         // Setup: deposit funds and move to bucket
         vm.prank(alice);
         vault.deposit(100 ether, alice);
-        
+
         uint256 htpIndex = liveFork ? info.priceToIndex(info.htp(address(pool))) : 2550;
-        
+
         // First setup some funds in a bucket
         vm.prank(keeper);
         vault.moveFromBuffer(htpIndex, 50 ether);
-        
+
         // Keeper should be able to call move
         vm.prank(keeper);
         vault.move(htpIndex, htpIndex + 100, 10 ether);
-        
+
         // Verify the move worked
         assertTrue(vault.lps(htpIndex + 100) > 0, "Move should have created LPs in destination bucket");
     }
@@ -295,31 +303,31 @@ contract VaultAjnaTest is VaultBaseTest {
         // Setup: deposit funds and move to bucket
         vm.prank(alice);
         vault.deposit(100 ether, alice);
-        
+
         uint256 htpIndex = liveFork ? info.priceToIndex(info.htp(address(pool))) : 2550;
 
         vm.prank(keeper);
         vault.moveFromBuffer(htpIndex, 50 ether);
-        
+
         // Admin should be able to call move
         vm.prank(admin);
         vault.move(htpIndex, htpIndex + 100, 10 ether);
-        
+
         // Verify the move worked
         assertTrue(vault.lps(htpIndex + 100) > 0, "Admin move should have worked");
     }
 
     function test_keeper_canCallMoveFromBuffer() public {
-        // Setup: deposit funds 
+        // Setup: deposit funds
         vm.prank(alice);
         vault.deposit(100 ether, alice);
-        
+
         uint256 htpIndex = liveFork ? info.priceToIndex(info.htp(address(pool))) : 2550;
-        
+
         // Keeper should be able to call moveFromBuffer
         vm.prank(keeper);
         vault.moveFromBuffer(htpIndex, 50 ether);
-        
+
         // Verify the move worked
         assertTrue(vault.lps(htpIndex) > 0, "MoveFromBuffer should have created LPs in bucket");
         assertTrue(vault.bufferLps() < 100 ether, "Buffer LPs should have decreased");
@@ -329,16 +337,16 @@ contract VaultAjnaTest is VaultBaseTest {
         // Setup: deposit funds and create bucket
         vm.prank(alice);
         vault.deposit(100 ether, alice);
-        
+
         uint256 htpIndex = liveFork ? info.priceToIndex(info.htp(address(pool))) : 2550;
 
         vm.prank(keeper);
         vault.moveFromBuffer(htpIndex, 50 ether);
-        
+
         // Only admin/keeper should be able to call moveToBuffer
         vm.prank(keeper);
         vault.moveToBuffer(htpIndex, 10 ether);
-        
+
         // Verify the move worked
         assertTrue(vault.bufferLps() > 0, "MoveToBuffer should have increased buffer LPs");
     }
@@ -347,12 +355,12 @@ contract VaultAjnaTest is VaultBaseTest {
         // Setup: deposit funds and move to bucket
         vm.prank(alice);
         vault.deposit(100 ether, alice);
-        
+
         uint256 htpIndex = liveFork ? info.priceToIndex(info.htp(address(pool))) : 2550;
-        
+
         vm.prank(keeper);
         vault.moveFromBuffer(htpIndex, 50 ether);
-        
+
         // Non-keeper, non-admin should not be able to call move
         vm.expectRevert(abi.encodeWithSelector(IVault.NotAuthorized.selector));
         vm.prank(bob);
@@ -363,9 +371,9 @@ contract VaultAjnaTest is VaultBaseTest {
         // Setup: deposit funds
         vm.prank(alice);
         vault.deposit(100 ether, alice);
-        
+
         uint256 htpIndex = liveFork ? info.priceToIndex(info.htp(address(pool))) : 2550;
-        
+
         // Non-keeper should not be able to call moveFromBuffer
         vm.expectRevert(abi.encodeWithSelector(IVault.NotAuthorized.selector));
         vm.prank(bob);
@@ -376,9 +384,9 @@ contract VaultAjnaTest is VaultBaseTest {
         // Setup: deposit funds
         vm.prank(alice);
         vault.deposit(100 ether, alice);
-        
+
         uint256 htpIndex = liveFork ? info.priceToIndex(info.htp(address(pool))) : 2550;
-        
+
         // Admin should not be able to call moveFromBuffer (only keepers)
         vm.expectRevert(abi.encodeWithSelector(IVault.NotAuthorized.selector));
         vm.prank(admin);
@@ -386,24 +394,24 @@ contract VaultAjnaTest is VaultBaseTest {
     }
 
     function test_removedKeeper_cannotCallMove() public {
-        // Setup: deposit funds 
+        // Setup: deposit funds
         vm.prank(alice);
         vault.deposit(100 ether, alice);
-        
+
         uint256 htpIndex = liveFork ? info.priceToIndex(info.htp(address(pool))) : 2550;
-        
+
         // Setup initial bucket
         vm.prank(keeper);
         vault.moveFromBuffer(htpIndex, 50 ether);
-        
+
         // Verify bob can call move
         vm.prank(keeper);
         vault.move(htpIndex, htpIndex + 100, 5 ether);
-        
+
         // Remove keeper
         vm.prank(admin);
         auth.setKeeper(keeper, false);
-        
+
         // Keeper should no longer be able to call move
         vm.expectRevert(abi.encodeWithSelector(IVault.NotAuthorized.selector));
         vm.prank(keeper);
@@ -414,17 +422,17 @@ contract VaultAjnaTest is VaultBaseTest {
         // Setup: deposit funds
         vm.prank(alice);
         vault.deposit(100 ether, alice);
-        
+
         uint256 htpIndex = liveFork ? info.priceToIndex(info.htp(address(pool))) : 2550;
-        
+
         // Verify bob can call moveFromBuffer
         vm.prank(keeper);
         vault.moveFromBuffer(htpIndex, 20 ether);
-        
+
         // Remove keeper
         vm.prank(admin);
         auth.setKeeper(keeper, false);
-        
+
         // Keeper should no longer be able to call moveFromBuffer
         vm.expectRevert(abi.encodeWithSelector(IVault.NotAuthorized.selector));
         vm.prank(keeper);
@@ -432,32 +440,32 @@ contract VaultAjnaTest is VaultBaseTest {
     }
 
     function test_multipleKeepers_canAllCallFunctions() public {
-        // Setup: deposit funds 
+        // Setup: deposit funds
         vm.prank(alice);
         vault.deposit(200 ether, alice);
-        
+
         uint256 htpIndex = liveFork ? info.priceToIndex(info.htp(address(pool))) : 2550;
-        
+
         // Add multiple keepers
         vm.startPrank(admin);
         auth.setKeeper(keeper, true);
         auth.setKeeper(bob, true);
         vm.stopPrank();
-        
+
         // Both keepers should be able to call moveFromBuffer
         vm.prank(keeper);
         vault.moveFromBuffer(htpIndex, 50 ether);
-        
+
         vm.prank(bob);
         vault.moveFromBuffer(htpIndex + 100, 50 ether);
-        
+
         // Both keepers should be able to call move
         vm.prank(keeper);
         vault.move(htpIndex, htpIndex + 200, 10 ether);
-        
+
         vm.prank(bob);
         vault.move(htpIndex + 100, htpIndex + 300, 10 ether);
-        
+
         // Verify all operations worked
         assertTrue(vault.lps(htpIndex) > 0, "Keeper's moveFromBuffer should have worked");
         assertTrue(vault.lps(htpIndex + 100) > 0, "Bob's moveFromBuffer should have worked");

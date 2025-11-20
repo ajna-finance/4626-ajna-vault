@@ -315,6 +315,7 @@ contract Vault4626Test is VaultBaseTest {
     }
 
     function test_returnQuoteTokenAdmin() public {
+        pool.updateInterest();
         uint256 wadAssets = 100 * WAD;
 
         uint256 htpIndex = info.priceToIndex(info.htp(address(pool)));
@@ -406,6 +407,7 @@ contract Vault4626Test is VaultBaseTest {
     }
 
     function test_returnQuoteTokenSwapper() public {
+        pool.updateInterest();
         uint256 wadAssets = 100 * WAD;
 
         uint256 htpIndex = info.priceToIndex(info.htp(address(pool)));
