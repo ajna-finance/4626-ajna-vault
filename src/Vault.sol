@@ -242,7 +242,7 @@ contract Vault is IVault, ERC4626 {
         emit Deposit(caller, receiver, assets, shares);
     }
 
-    function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares) internal override {
+    function _withdraw(address caller, address /* receiver */, address owner, uint256 assets, uint256 shares) internal override {
         // Check allowance
         if (caller != owner) {
             _spendAllowance(owner, caller, shares);
@@ -254,7 +254,7 @@ contract Vault is IVault, ERC4626 {
         // Convert assets from underlying decimals to WAD for internal operations
         uint256 wadAssets = _convertAssetToWad(assets);
 
-        // Move assets from the Buffer to the receiver
+        // Move assets from the Buffer
         (/* _assets */, uint256 _lps) = BUFFER.removeQuoteToken(wadAssets, 0);
         _wash(address(BUFFER), 0, _lps);
     }
