@@ -141,11 +141,11 @@ library AjnaVaultLibrary {
         IVaultAuth _auth,
         uint256 _toIndex,
         uint256 _amt
-    ) external returns (uint256 _toLps) {
+    ) external returns (uint256 _toLps, uint256 _assets) {
         _pool.updateInterest();
         _validDestination(_info, _pool, _toIndex, _auth);
 
-        (_toLps, /* _assets */) = _pool.addQuoteToken(_amt, _toIndex, block.timestamp);
+        (_toLps, _assets) = _pool.addQuoteToken(_amt, _toIndex, block.timestamp);
     }
 
     // External View Functions

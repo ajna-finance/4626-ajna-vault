@@ -351,11 +351,11 @@ contract Vault is IVault, ERC4626 {
 
         _transferAssetFrom(msg.sender, address(this), _convertWadToAsset(_amt));
 
-        (uint256 _lps) = AVL.returnQuoteToken(INFO, POOL, AUTH, _toIndex, _amt);
+        (uint256 _lps, uint256 _assets) = AVL.returnQuoteToken(INFO, POOL, AUTH, _toIndex, _amt);
 
         _fill(address(POOL), _toIndex, _lps);
 
-        emit ReturnQuoteToken(msg.sender, _toIndex, _amt, _lps);
+        emit ReturnQuoteToken(msg.sender, _toIndex, _assets, _lps);
     }
 
     // GETTERS
