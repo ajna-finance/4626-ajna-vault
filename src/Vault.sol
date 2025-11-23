@@ -19,6 +19,8 @@ import {AjnaVaultLibrary as AVL} from "./AjnaVaultLibrary.sol";
 import {IVault} from "./interfaces/IVault.sol";
 import {IVaultAuth} from "./interfaces/IVaultAuth.sol";
 
+import "forge-std/console.sol";
+
 contract Vault is IVault, ERC4626 {
     using SafeERC20 for IERC20;
 
@@ -172,16 +174,15 @@ contract Vault is IVault, ERC4626 {
             revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
         }
 
-        // Calculate shares needed for assets (including tax)
-        uint256 shares = previewWithdraw(assets);
+        uint256 grossAssets = _getAssetsWithFee(AUTH.tax(), assets);
 
-        // Calculate tax on assets
-        (uint256 taxFee,) = _getFee(AUTH.tax(), assets);
+        // Calculate shares needed for assets (including tax)
+        uint256 shares = super.previewWithdraw(grossAssets);
 
         // Burn shares and withdraw gross assets
-        _withdraw(msg.sender, receiver, owner, assets + taxFee, shares);
+        _withdraw(msg.sender, receiver, owner, grossAssets, shares);
 
-        _sendFee(taxFee);
+        _sendFee(grossAssets - assets);
 
         // Send net assets to receiver
         _transferAssetFrom(address(this), receiver, assets);

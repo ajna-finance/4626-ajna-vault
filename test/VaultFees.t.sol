@@ -420,7 +420,7 @@ contract VaultFeesTest is VaultBaseTest {
         // Check shares match preview
         assertEq(shares, expectedShares, "Shares should match preview");
 
-        uint256 expectedTax = (withdrawAmount * 300) / 10000; // 3%
+        uint256 expectedTax = (withdrawAmount * 10000) / (10000 - 300) - withdrawAmount; // 3%
 
         // Check bob received exact net amount requested
         assertEq(
@@ -442,32 +442,32 @@ contract VaultFeesTest is VaultBaseTest {
         uint256 depositAmount = 1000 * 10 ** vault.assetDecimals();
         vm.prank(alice);
         vault.deposit(depositAmount, alice);
-        
+
         // Set 3% tax
         vm.prank(admin);
         auth.setTax(300); // 3%
-        
+
         uint256 authBalanceBefore = IERC20(vault.asset()).balanceOf(address(auth));
         uint256 aliceBalanceBefore = IERC20(vault.asset()).balanceOf(alice);
-        
+
         // Max Withdraw should pull all of alice's shares out respecting the tax
         uint256 maxAssets = vault.maxWithdraw(alice);
-        
+
         vm.prank(alice);
         vault.withdraw(maxAssets, alice, alice);
-        
+
         // Check shares match preview
         assertEq(vault.balanceOf(alice), 0, "Alice should have no shares left");
 
-        uint256 expectedTax = (maxAssets * 300) / 10000; // 3%
-        
+        uint256 expectedTax = (maxAssets * 10000) / (10000 - 300) - maxAssets; // 3%
+
         // Check alice received exact net amount requested
         assertEq(
             IERC20(vault.asset()).balanceOf(alice),
             aliceBalanceBefore + maxAssets,
             "Alice should receive exact withdrawal amount"
         );
-        
+
         // Check tax was sent to AUTH (calculate expected tax)
         assertEq(
             IERC20(vault.asset()).balanceOf(address(auth)),
@@ -690,8 +690,8 @@ contract VaultFeesTest is VaultBaseTest {
         vault.withdraw(withdraw2, bob, bob);
 
         // Calculate expected total tax directly from withdrawal amounts
-        uint256 expectedTax1 = (withdraw1 * 500) / 10000; // 5%
-        uint256 expectedTax2 = (withdraw2 * 500) / 10000; // 5%
+        uint256 expectedTax1 = (withdraw1 * 10000) / (10000 - 500) - withdraw1; // 5%
+        uint256 expectedTax2 = (withdraw2 * 10000) / (10000 - 500) - withdraw2; // 5%
         uint256 expectedTotalTax = expectedTax1 + expectedTax2;
 
         assertApproxEqAbs(
@@ -783,7 +783,7 @@ contract VaultFeesTest is VaultBaseTest {
         vault.withdraw(withdrawAmount, alice, alice);
 
         uint256 authBalanceAfterWithdraw = IERC20(vault.asset()).balanceOf(address(auth));
-        uint256 expectedTax = (withdrawAmount * 250) / 10000; // 2.5%
+        uint256 expectedTax = (withdrawAmount * 10000) / (10000 - 250) - withdrawAmount; // 2.5%
 
         assertApproxEqAbs(
             authBalanceAfterWithdraw,
