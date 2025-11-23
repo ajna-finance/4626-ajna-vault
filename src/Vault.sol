@@ -37,13 +37,12 @@ contract Vault is IVault, ERC4626 {
     uint256       public immutable LP_DUST;
 
     // STATE VARIABLES
-    uint8 private bolt; // reentrancy lock: 0 = off, 1 = on
-
     uint256[]                   private buckets;
-    mapping(uint256 => uint256) public bucketsIndex; // (bucketIndex => index location in buckets)
+    mapping(uint256 => uint256) public bucketsIndex;          // (bucketIndex => index location in buckets)
     uint256                     public bufferLps;
-    mapping(uint256 => uint256) public lps; // (bucketIndex => lps)
+    mapping(uint256 => uint256) public lps;                   // (bucketIndex => lps)
     uint256                     public removedCollateralValue;
+    uint8                       public bolt;                  // reentrancy lock: 0 = off, 1 = on
 
     // MODIFIERS
     modifier lock() {
