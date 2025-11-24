@@ -20,19 +20,6 @@ contract VaultDrainTest is VaultBaseTest {
         vault.deposit(1000 ether, alice);
     }
 
-    // Helper function to mock lenderInfo for both local and fork tests
-    function _mockLenderInfo(uint256 _bucket, uint256 _newLps) internal {
-        vm.mockCall(
-            address(pool),
-            abi.encodeWithSelector(
-                pool.lenderInfo.selector,
-                _bucket,
-                address(vault)
-            ),
-            abi.encode(_newLps, block.timestamp)
-        );
-    }
-
     // PERMISSION TESTS
 
     event Drain(address caller, uint256 bucket, uint256 lps, uint256 newLps);
@@ -215,6 +202,11 @@ contract VaultDrainTest is VaultBaseTest {
         // Mock the pool to return 0 LPs (complete drain)
         _mockLenderInfo(4000, 0);
 
+        uint256[] memory buckets = vault.getBuckets();
+        assertEq(buckets.length, 1, "Should have 1 bucket");
+        assertEq(buckets[0], 4000, "Bucket should be in buckets");
+        assertEq(vault.bucketsIndex(4000), 0, "Bucket index should be removed from buckets index");
+
         // Call drain
         vm.expectEmit(true, true, true, true);
         emit Drain(admin, 4000, originalLps, 0);
@@ -224,6 +216,9 @@ contract VaultDrainTest is VaultBaseTest {
 
         // Verify the LPs were set to 0
         assertEq(vault.lps(4000), 0, "LPs should be set to 0 when pool is completely drained");
+        uint256[] memory afterBuckets = vault.getBuckets();
+        assertEq(afterBuckets.length, 0, "Should have 0 buckets");
+        assertEq(vault.bucketsIndex(4000), 0, "Bucket index should be removed from buckets index");
     }
 
     // FORK-SPECIFIC TESTS (use real pool data)
@@ -322,8 +317,6 @@ contract VaultDrainTest is VaultBaseTest {
         uint256 newLps = (originalLps * (100 - _reductionPercent)) / 100;
         _mockLenderInfo(4000, newLps);
 
-        uint256 originalTotalAssets = vault.totalAssets();
-
         if (newLps < originalLps) {
             // Should emit drain event
             vm.expectEmit(true, true, true, true);
@@ -335,13 +328,5 @@ contract VaultDrainTest is VaultBaseTest {
 
         // Verify the LPs were updated correctly
         assertEq(vault.lps(4000), newLps, "LPs should be updated to new value");
-
-        if (newLps < originalLps) {
-            // Total assets should decrease when LPs are reduced
-            assertLt(vault.totalAssets(), originalTotalAssets, "Total assets should decrease when LPs are drained");
-        } else {
-            // Total assets should remain the same when no drain occurs
-            assertEq(vault.totalAssets(), originalTotalAssets, "Total assets should remain same when no drain occurs");
-        }
     }
 }

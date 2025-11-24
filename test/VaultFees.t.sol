@@ -15,25 +15,25 @@ contract VaultFeesTest is VaultBaseTest {
 
     function test_setToll() public {
         uint256 newToll = 100; // 1%
-        
+
         vm.expectEmit(true, true, true, true);
         emit TollSet(newToll);
-        
+
         vm.prank(admin);
         auth.setToll(newToll);
-        
+
         assertEq(auth.toll(), newToll, "Toll not set correctly");
     }
 
     function test_setTax() public {
         uint256 newTax = 200; // 2%
-        
+
         vm.expectEmit(true, true, true, true);
         emit TaxSet(newTax);
-        
+
         vm.prank(admin);
         auth.setTax(newTax);
-        
+
         assertEq(auth.tax(), newTax, "Tax not set correctly");
     }
 
@@ -83,20 +83,20 @@ contract VaultFeesTest is VaultBaseTest {
         // Set initial fees
         vm.prank(admin);
         auth.setToll(100); // 1%
-        
+
         vm.prank(admin);
         auth.setTax(200); // 2%
-        
+
         assertEq(auth.toll(), 100, "Toll should be 1%");
         assertEq(auth.tax(), 200, "Tax should be 2%");
-        
+
         // Change the fees
         vm.prank(admin);
         auth.setToll(150); // 1.5%
-        
+
         vm.prank(admin);
         auth.setTax(50); // 0.5%
-        
+
         assertEq(auth.toll(), 150, "Toll should be 1.5%");
         assertEq(auth.tax(), 50, "Tax should be 0.5%");
     }
@@ -105,17 +105,17 @@ contract VaultFeesTest is VaultBaseTest {
         // First set non-zero fees
         vm.prank(admin);
         auth.setToll(500); // 5%
-        
+
         vm.prank(admin);
         auth.setTax(300); // 3%
-        
+
         // Then set them back to zero
         vm.prank(admin);
         auth.setToll(0);
-        
+
         vm.prank(admin);
         auth.setTax(0);
-        
+
         assertEq(auth.toll(), 0, "Toll should be 0");
         assertEq(auth.tax(), 0, "Tax should be 0");
     }
@@ -126,37 +126,37 @@ contract VaultFeesTest is VaultBaseTest {
         // Set 1% toll
         vm.prank(admin);
         auth.setToll(100); // 1%
-        
+
         uint256 depositAmount = 1000 * 10 ** vault.assetDecimals();
         uint256 expectedToll = depositAmount / 100; // 1%
         uint256 netDeposit = depositAmount - expectedToll;
-        
+
         uint256 authBalanceBefore = IERC20(vault.asset()).balanceOf(address(auth));
         uint256 aliceBalanceBefore = IERC20(vault.asset()).balanceOf(alice);
-        
+
         // Preview should show reduced shares due to toll
         uint256 expectedShares = vault.previewDeposit(depositAmount);
-        
+
         vm.prank(alice);
         uint256 shares = vault.deposit(depositAmount, alice);
-        
+
         // Check shares match preview
         assertEq(shares, expectedShares, "Shares should match preview");
-        
+
         // Check toll was sent to AUTH
         assertEq(
             IERC20(vault.asset()).balanceOf(address(auth)),
             authBalanceBefore + expectedToll,
             "AUTH should receive toll"
         );
-        
+
         // Check user paid full amount
         assertEq(
             IERC20(vault.asset()).balanceOf(alice),
             aliceBalanceBefore - depositAmount,
             "Alice should pay full deposit amount"
         );
-        
+
         // Check vault received net amount (in buffer)
         assertEq(
             IERC20(vault.asset()).balanceOf(vault.buffer()),
@@ -169,42 +169,42 @@ contract VaultFeesTest is VaultBaseTest {
         // Set 1% toll
         vm.prank(admin);
         auth.setToll(100); // 1%
-        
+
         uint256 sharesToMint = 500 * 10 ** vault.decimals(); // Reduce amount to stay within balance
-        
+
         uint256 authBalanceBefore = IERC20(vault.asset()).balanceOf(address(auth));
         uint256 aliceBalanceBefore = IERC20(vault.asset()).balanceOf(alice);
-        
+
         // Preview should show increased assets due to toll
         uint256 expectedAssets = vault.previewMint(sharesToMint);
-        
+
         vm.prank(alice);
         uint256 assets = vault.mint(sharesToMint, alice);
-        
+
         // Check assets match preview
         assertEq(assets, expectedAssets, "Assets should match preview");
-        
+
         // Calculate expected toll from the assets paid
         uint256 baseAssets = vault.convertToAssets(sharesToMint); // assets without toll
         uint256 expectedToll = assets - baseAssets;
-        
+
         // Check toll was sent to AUTH
         assertEq(
             IERC20(vault.asset()).balanceOf(address(auth)),
             authBalanceBefore + expectedToll,
             "AUTH should receive toll"
         );
-        
+
         // Check user paid full amount (including toll)
         assertEq(
             IERC20(vault.asset()).balanceOf(alice),
             aliceBalanceBefore - assets,
             "Alice should pay full amount including toll"
         );
-        
+
         // Check user received exact shares requested
         assertEq(vault.balanceOf(alice), sharesToMint, "Alice should receive exact shares");
-        
+
         // Check vault received net amount (in buffer)
         assertEq(
             IERC20(vault.asset()).balanceOf(vault.buffer()),
@@ -217,28 +217,28 @@ contract VaultFeesTest is VaultBaseTest {
         // Set 2% toll
         vm.prank(admin);
         auth.setToll(200); // 2%
-        
+
         uint256 depositAmount = 1000 * 10 ** vault.assetDecimals();
 
         uint256 aliceBalanceBefore = IERC20(vault.asset()).balanceOf(alice);
         uint256 bobBalanceBefore = IERC20(vault.asset()).balanceOf(bob);
-        
+
         // Alice deposits
         vm.prank(alice);
         uint256 sharesFromDeposit = vault.deposit(depositAmount, alice);
-        
+
         // Bob mints the same number of shares
         console.log("sharesFromDeposit", sharesFromDeposit);
         vm.prank(bob);
         uint256 assetsForMint = vault.mint(sharesFromDeposit, bob);
-        
+
         // Both should have same shares
         assertEq(
             vault.balanceOf(alice),
             vault.balanceOf(bob),
             "Alice and Bob should have same shares"
         );
-        
+
         // Both should pay the SAME amount for the same shares
         assertEq(
             assetsForMint,
@@ -257,12 +257,12 @@ contract VaultFeesTest is VaultBaseTest {
         // Set 10% toll
         vm.prank(admin);
         auth.setToll(1000); // 10%
-        
+
         uint256 assets = 1000 * 10 ** vault.assetDecimals();
-        
+
         uint256 previewDepositShares = vault.previewDeposit(assets);
         uint256 previewMintAssets = vault.previewMint(previewDepositShares);
-        
+
         assertEq(previewMintAssets, assets, "Preview functions should be equivalent");
         console.log("previewDepositShares", previewDepositShares);
         console.log("previewMintAssets   ", previewMintAssets);
@@ -272,7 +272,7 @@ contract VaultFeesTest is VaultBaseTest {
 
         previewMintAssets = vault.previewMint(shares);
         previewDepositShares = vault.previewDeposit(previewMintAssets);
-        assertEq(previewDepositShares, shares, "Preview functions should be equivalent");
+        assertApproxEqAbs(previewDepositShares, shares, 1, "Preview functions should be equivalent with potential rounding for fee");
         console.log("previewMintAssets   ", previewMintAssets);
         console.log("previewDepositShares", previewDepositShares);
         console.log("shares              ", shares);
@@ -282,10 +282,10 @@ contract VaultFeesTest is VaultBaseTest {
         // Set 5% toll
         vm.prank(admin);
         auth.setToll(500); // 5%
-        
+
         uint256 assets = 1000 * 10 ** vault.assetDecimals();
         uint256 shares = 1000 * 10 ** vault.decimals();
-        
+
         // Test previewDeposit
         uint256 previewShares = vault.previewDeposit(assets);
         uint256 expectedNetAssets = (assets * 9500) / 10000; // 95% after 5% toll
@@ -296,7 +296,7 @@ contract VaultFeesTest is VaultBaseTest {
             1,
             "previewDeposit should account for toll"
         );
-        
+
         // Test previewMint
         uint256 previewAssets = vault.previewMint(shares);
         uint256 baseAssets = vault.convertToAssets(shares);
@@ -314,26 +314,26 @@ contract VaultFeesTest is VaultBaseTest {
         // Set 3% toll
         vm.prank(admin);
         auth.setToll(300); // 3%
-        
+
         uint256 authBalanceStart = IERC20(vault.asset()).balanceOf(address(auth));
-        
+
         // Multiple deposits from different users
         uint256 deposit1 = 500 * 10 ** vault.assetDecimals();
         uint256 deposit2 = 300 * 10 ** vault.assetDecimals();
         uint256 deposit3 = 200 * 10 ** vault.assetDecimals();
-        
+
         vm.prank(alice);
         vault.deposit(deposit1, alice);
-        
+
         vm.prank(bob);
         vault.deposit(deposit2, bob);
-        
+
         vm.prank(alice);
         vault.deposit(deposit3, alice);
-        
+
         uint256 totalDeposited = deposit1 + deposit2 + deposit3;
         uint256 expectedTotalToll = (totalDeposited * 300) / 10000; // 3%
-        
+
         assertEq(
             IERC20(vault.asset()).balanceOf(address(auth)),
             authBalanceStart + expectedTotalToll,
@@ -343,26 +343,26 @@ contract VaultFeesTest is VaultBaseTest {
 
     function test_changingTollBetweenTransactions() public {
         uint256 depositAmount = 1000 * 10 ** vault.assetDecimals();
-        
+
         // First deposit with 1% toll
         vm.prank(admin);
         auth.setToll(100); // 1%
-        
+
         uint256 shares1 = vault.previewDeposit(depositAmount);
         vm.prank(alice);
         uint256 actualShares1 = vault.deposit(depositAmount, alice);
         assertEq(actualShares1, shares1, "First deposit shares should match preview");
-        
+
         // Change toll to 5%
         vm.prank(admin);
         auth.setToll(500); // 5%
-        
+
         // Second deposit with new toll
         uint256 shares2 = vault.previewDeposit(depositAmount);
         vm.prank(bob);
         uint256 actualShares2 = vault.deposit(depositAmount, bob);
         assertEq(actualShares2, shares2, "Second deposit shares should match preview");
-        
+
         // Bob should get fewer shares due to higher toll
         assertLt(actualShares2, actualShares1, "Higher toll should result in fewer shares");
     }
@@ -372,24 +372,24 @@ contract VaultFeesTest is VaultBaseTest {
         uint256 cap = 1500 * 10 ** vault.assetDecimals(); // Reduce cap to stay within user balances
         vm.prank(admin);
         auth.setDepositCap(cap);
-        
+
         // Set 2% toll
         vm.prank(admin);
         auth.setToll(200); // 2%
-        
+
         uint256 maxDep = vault.maxDeposit(alice);
         assertEq(maxDep, cap, "Max deposit should equal cap");
-        
+
         // Deposit some amount
         uint256 firstDeposit = 500 * 10 ** vault.assetDecimals();
         vm.prank(alice);
         vault.deposit(firstDeposit, alice);
-        
+
         // Total assets should be less than deposit due to toll
         uint256 totalAssetsAfter = vault.totalAssets();
         uint256 expectedNetDeposit = (firstDeposit * 9800) / 10000; // 98% after 2% toll
         assertEq(totalAssetsAfter, expectedNetDeposit, "Total assets should be net of toll");
-        
+
         // Max deposit should still be based on gross cap
         uint256 remainingCap = cap - totalAssetsAfter;
         assertEq(vault.maxDeposit(bob), remainingCap, "Max deposit should be remaining cap");
@@ -402,33 +402,72 @@ contract VaultFeesTest is VaultBaseTest {
         uint256 depositAmount = 1000 * 10 ** vault.assetDecimals();
         vm.prank(alice);
         vault.deposit(depositAmount, alice);
-        
+
         // Set 3% tax
         vm.prank(admin);
         auth.setTax(300); // 3%
-        
+
         uint256 withdrawAmount = 500 * 10 ** vault.assetDecimals();
         uint256 authBalanceBefore = IERC20(vault.asset()).balanceOf(address(auth));
         uint256 bobBalanceBefore = IERC20(vault.asset()).balanceOf(bob);
-        
+
         // Preview should show more shares needed due to tax
         uint256 expectedShares = vault.previewWithdraw(withdrawAmount);
-        
+
         vm.prank(alice);
         uint256 shares = vault.withdraw(withdrawAmount, bob, alice);
-        
+
         // Check shares match preview
         assertEq(shares, expectedShares, "Shares should match preview");
 
-        uint256 expectedTax = (withdrawAmount * 300) / 10000; // 3%
-        
+        uint256 expectedTax = (withdrawAmount * 10000) / (10000 - 300) - withdrawAmount; // 3%
+
         // Check bob received exact net amount requested
         assertEq(
             IERC20(vault.asset()).balanceOf(bob),
             bobBalanceBefore + withdrawAmount,
             "Bob should receive exact withdrawal amount"
         );
-        
+
+        // Check tax was sent to AUTH (calculate expected tax)
+        assertEq(
+            IERC20(vault.asset()).balanceOf(address(auth)),
+            authBalanceBefore + expectedTax,
+            "AUTH should receive tax"
+        );
+    }
+
+    function test_maxWithdrawWithTax() public {
+        // First deposit some assets
+        uint256 depositAmount = 1000 * 10 ** vault.assetDecimals();
+        vm.prank(alice);
+        vault.deposit(depositAmount, alice);
+
+        // Set 3% tax
+        vm.prank(admin);
+        auth.setTax(300); // 3%
+
+        uint256 authBalanceBefore = IERC20(vault.asset()).balanceOf(address(auth));
+        uint256 aliceBalanceBefore = IERC20(vault.asset()).balanceOf(alice);
+
+        // Max Withdraw should pull all of alice's shares out respecting the tax
+        uint256 maxAssets = vault.maxWithdraw(alice);
+
+        vm.prank(alice);
+        vault.withdraw(maxAssets, alice, alice);
+
+        // Check shares match preview
+        assertEq(vault.balanceOf(alice), 0, "Alice should have no shares left");
+
+        uint256 expectedTax = (maxAssets * 10000) / (10000 - 300) - maxAssets; // 3%
+
+        // Check alice received exact net amount requested
+        assertEq(
+            IERC20(vault.asset()).balanceOf(alice),
+            aliceBalanceBefore + maxAssets,
+            "Alice should receive exact withdrawal amount"
+        );
+
         // Check tax was sent to AUTH (calculate expected tax)
         assertEq(
             IERC20(vault.asset()).balanceOf(address(auth)),
@@ -442,38 +481,38 @@ contract VaultFeesTest is VaultBaseTest {
         uint256 depositAmount = 1000 * 10 ** vault.assetDecimals();
         vm.prank(alice);
         vault.deposit(depositAmount, alice);
-        
+
         // Set 2% tax
         vm.prank(admin);
         auth.setTax(200); // 2%
-        
+
         uint256 sharesToRedeem = 400 * 10 ** vault.decimals();
         uint256 authBalanceBefore = IERC20(vault.asset()).balanceOf(address(auth));
         uint256 bobBalanceBefore = IERC20(vault.asset()).balanceOf(bob);
-        
+
         // Preview should show reduced assets due to tax
         uint256 expectedAssets = vault.previewRedeem(sharesToRedeem);
-        
+
         vm.prank(alice);
         uint256 assets = vault.redeem(sharesToRedeem, bob, alice);
-        
+
         // Check assets match preview
         assertEq(assets, expectedAssets, "Assets should match preview");
-        
+
         // Check bob received net assets
         assertEq(
             IERC20(vault.asset()).balanceOf(bob),
             bobBalanceBefore + assets,
             "Bob should receive net assets"
         );
-        
+
         // Check alice's shares were burned
         assertEq(
-            vault.balanceOf(alice), 
+            vault.balanceOf(alice),
             depositAmount - sharesToRedeem,
             "Alice's shares should be reduced"
         );
-        
+
         // Check tax was sent to AUTH
         uint256 grossAssets = vault.convertToAssets(sharesToRedeem);
         uint256 expectedTax = (grossAssets * 200) / 10000; // 2%
@@ -491,7 +530,7 @@ contract VaultFeesTest is VaultBaseTest {
         uint256 depositAmount = 1000 * 10 ** vault.assetDecimals();
         vm.prank(alice);
         vault.deposit(depositAmount, alice);
-        
+
         uint256 aliceBalanceBefore = IERC20(vault.asset()).balanceOf(alice);
         uint256 withdrawAmount = 500 * 10 ** vault.assetDecimals();
         uint256 previewShares = vault.previewWithdraw(withdrawAmount);
@@ -510,8 +549,8 @@ contract VaultFeesTest is VaultBaseTest {
         uint256 depositAmount = 1000 * 10 ** vault.assetDecimals();
         vm.prank(alice);
         vault.deposit(depositAmount, alice);
-        
-        
+
+
         uint256 aliceBalanceBefore = IERC20(vault.asset()).balanceOf(alice);
         uint256 sharesToRedeem = vault.balanceOf(alice);
         uint256 previewAssets = vault.previewRedeem(sharesToRedeem);
@@ -530,28 +569,28 @@ contract VaultFeesTest is VaultBaseTest {
         vault.deposit(depositAmount, alice);
         vm.prank(bob);
         vault.deposit(depositAmount, bob);
-        
+
         // Set 4% tax
         vm.prank(admin);
         auth.setTax(400); // 4%
-        
+
         uint256 withdrawAmount = 300 * 10 ** vault.assetDecimals();
 
         uint256 previewSharesForWithdraw = vault.previewWithdraw(withdrawAmount);
         uint256 previewAssetsFromRedeem = vault.previewRedeem(previewSharesForWithdraw);
-        
+
         assertApproxEqAbs(
             previewAssetsFromRedeem,
             withdrawAmount,
             1,
             "Preview functions should be equivalent for tax"
         );
-        
+
         // Bob redeems first
         uint256 bobBalanceBefore = IERC20(vault.asset()).balanceOf(bob);
         vm.prank(bob);
         uint256 assetsFromRedeem = vault.redeem(previewSharesForWithdraw, bob, bob);
-        
+
         // Alice withdraws specific amount after Bob's redeem
         uint256 aliceBalanceBefore = IERC20(vault.asset()).balanceOf(alice);
         vm.prank(alice);
@@ -561,11 +600,11 @@ contract VaultFeesTest is VaultBaseTest {
         assertEq(assetsFromRedeem, previewAssetsFromRedeem, "redeem preview should be same as redeem");
 
         assertEq(assetsFromRedeem, withdrawAmount, "Assets from redeem should be equal to withdraw amount");
-        
+
         // Both should have received equivalent value
         uint256 aliceReceived = IERC20(vault.asset()).balanceOf(alice) - aliceBalanceBefore;
         uint256 bobReceived = IERC20(vault.asset()).balanceOf(bob) - bobBalanceBefore;
-        
+
         assertEq(aliceReceived, withdrawAmount, "Alice should receive exact withdrawal amount");
         assertApproxEqAbs(
             bobReceived,
@@ -599,25 +638,25 @@ contract VaultFeesTest is VaultBaseTest {
         // Set 6% tax
         vm.prank(admin);
         auth.setTax(600); // 6%
-        
+
         uint256 assets = 500 * 10 ** vault.assetDecimals();
-        
+
         // Test withdraw preview equivalence
         uint256 sharesForWithdraw = vault.previewWithdraw(assets);
         uint256 assetsFromRedeem = vault.previewRedeem(sharesForWithdraw);
-        
+
         assertApproxEqAbs(
             assetsFromRedeem,
             assets,
             1,
             "Preview functions should be equivalent for tax"
         );
-        
+
         // Test redeem preview equivalence
         uint256 shares = 500 * 10 ** vault.decimals();
         uint256 assetsForRedeem = vault.previewRedeem(shares);
         uint256 sharesFromWithdraw = vault.previewWithdraw(assetsForRedeem);
-        
+
         assertApproxEqAbs(
             sharesFromWithdraw,
             shares,
@@ -630,31 +669,31 @@ contract VaultFeesTest is VaultBaseTest {
         // Set 5% tax
         vm.prank(admin);
         auth.setTax(500); // 5%
-        
+
         // Deposit from multiple users
         uint256 depositAmount = 600 * 10 ** vault.assetDecimals();
         vm.prank(alice);
         vault.deposit(depositAmount, alice);
         vm.prank(bob);
         vault.deposit(depositAmount, bob);
-        
+
         uint256 authBalanceStart = IERC20(vault.asset()).balanceOf(address(auth));
-        
+
         // Multiple withdrawals
         uint256 withdraw1 = 200 * 10 ** vault.assetDecimals();
         uint256 withdraw2 = 150 * 10 ** vault.assetDecimals();
-        
+
         vm.prank(alice);
         vault.withdraw(withdraw1, alice, alice);
-        
+
         vm.prank(bob);
         vault.withdraw(withdraw2, bob, bob);
-        
+
         // Calculate expected total tax directly from withdrawal amounts
-        uint256 expectedTax1 = (withdraw1 * 500) / 10000; // 5%
-        uint256 expectedTax2 = (withdraw2 * 500) / 10000; // 5% 
+        uint256 expectedTax1 = (withdraw1 * 10000) / (10000 - 500) - withdraw1; // 5%
+        uint256 expectedTax2 = (withdraw2 * 10000) / (10000 - 500) - withdraw2; // 5%
         uint256 expectedTotalTax = expectedTax1 + expectedTax2;
-        
+
         assertApproxEqAbs(
             IERC20(vault.asset()).balanceOf(address(auth)),
             authBalanceStart + expectedTotalTax,
@@ -669,28 +708,28 @@ contract VaultFeesTest is VaultBaseTest {
         vault.deposit(depositAmount, alice);
         vm.prank(bob);
         vault.deposit(depositAmount, bob);
-        
+
         uint256 withdrawAmount = 200 * 10 ** vault.assetDecimals();
-        
+
         // First withdrawal with 2% tax
         vm.prank(admin);
         auth.setTax(200); // 2%
-        
+
         uint256 shares1 = vault.previewWithdraw(withdrawAmount);
         vm.prank(alice);
         uint256 actualShares1 = vault.withdraw(withdrawAmount, alice, alice);
         assertEq(actualShares1, shares1, "First withdrawal shares should match preview");
-        
+
         // Change tax to 8%
         vm.prank(admin);
         auth.setTax(800); // 8%
-        
+
         // Second withdrawal with new tax
         uint256 shares2 = vault.previewWithdraw(withdrawAmount);
         vm.prank(bob);
         uint256 actualShares2 = vault.withdraw(withdrawAmount, bob, bob);
         assertEq(actualShares2, shares2, "Second withdrawal shares should match preview");
-        
+
         // Bob should need more shares due to higher tax
         assertGt(actualShares2, actualShares1, "Higher tax should require more shares");
     }
@@ -699,17 +738,17 @@ contract VaultFeesTest is VaultBaseTest {
         // Set 7% tax
         vm.prank(admin);
         auth.setTax(700); // 7%
-        
+
         // Deposit some assets first
         uint256 depositAmount = 500 * 10 ** vault.assetDecimals();
         vm.prank(alice);
         vault.deposit(depositAmount, alice);
-        
+
         // Withdraw 0 should work
         vm.prank(alice);
         uint256 shares = vault.withdraw(0, alice, alice);
         assertEq(shares, 0, "Withdrawing 0 should burn 0 shares");
-        
+
         // Redeem 0 should work
         vm.prank(alice);
         uint256 assets = vault.redeem(0, alice, alice);
@@ -722,14 +761,14 @@ contract VaultFeesTest is VaultBaseTest {
         auth.setToll(300); // 3%
         vm.prank(admin);
         auth.setTax(250); // 2.5%
-        
+
         uint256 depositAmount = 1000 * 10 ** vault.assetDecimals();
         uint256 authBalanceBefore = IERC20(vault.asset()).balanceOf(address(auth));
-        
+
         // Alice deposits (pays toll)
         vm.prank(alice);
         vault.deposit(depositAmount, alice);
-        
+
         uint256 authBalanceAfterDeposit = IERC20(vault.asset()).balanceOf(address(auth));
         uint256 expectedToll = (depositAmount * 300) / 10000; // 3%
         assertEq(
@@ -737,15 +776,15 @@ contract VaultFeesTest is VaultBaseTest {
             authBalanceBefore + expectedToll,
             "AUTH should receive toll from deposit"
         );
-        
+
         // Alice withdraws (pays tax)
         uint256 withdrawAmount = 400 * 10 ** vault.assetDecimals();
         vm.prank(alice);
         vault.withdraw(withdrawAmount, alice, alice);
-        
+
         uint256 authBalanceAfterWithdraw = IERC20(vault.asset()).balanceOf(address(auth));
-        uint256 expectedTax = (withdrawAmount * 250) / 10000; // 2.5%
-        
+        uint256 expectedTax = (withdrawAmount * 10000) / (10000 - 250) - withdrawAmount; // 2.5%
+
         assertApproxEqAbs(
             authBalanceAfterWithdraw,
             authBalanceAfterDeposit + expectedTax,

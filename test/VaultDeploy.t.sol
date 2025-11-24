@@ -20,13 +20,23 @@ import {SageMock} from "./mocks/SageMock.sol";
 
 contract VaultDeployTest is Test {
     address public deployer = makeAddr("deployer");
+    bool public liveFork;
 
     function setUp() public {
         // Clear environment between tests
         vm.setEnv("CONFIG_PATH", "");
+        try vm.envString("ETH_RPC_URL") {
+            liveFork = true;
+        } catch {
+            liveFork = false;
+        }
     }
 
     function test_deployWithMinimalConfig() public {
+        if (liveFork) {
+            console.log("Skipping test_deployWithMinimalConfig - Live fork is enabled");
+            return;
+        }
         VaultScript script = new VaultScript();
 
         // Deploy a real mock ERC20 token

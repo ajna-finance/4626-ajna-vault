@@ -97,6 +97,8 @@ contract Buffer is IBuffer {
     ) external onlyVault lock returns (uint256, uint256) {
         // clear unused variables
         _bucket;
+        if (_wad > total) revert NotEnoughAssets();
+        if (total == 0) revert NotEnoughAssets();
 
         uint256 _sip  = Math.mulDiv(_wad * RAY, Mana, total * RAY, Math.Rounding.Up);
         Mana         -= _sip;
@@ -113,7 +115,7 @@ contract Buffer is IBuffer {
     function updateInterest() external {
         // do nothing
     }
-  
+
     //
     // Public view functions
     //

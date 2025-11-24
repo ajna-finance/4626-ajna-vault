@@ -28,6 +28,11 @@ interface IBuffer {
     error Unauthorized();
 
     /**
+     * @notice Error thrown when there are not enough assets in the buffer
+     */
+    error NotEnoughAssets();
+
+    /**
      * @notice Returns the quote token address
      * @return address The address of the quote token
      */
