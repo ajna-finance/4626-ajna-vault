@@ -10,7 +10,6 @@ The `Vault` and `IVault` interface explain how the Ajna ERC-4626 Vault works and
 | `InvalidDeposit()` | Deposit is zero or otherwise fails validation. | Provide a valid non-zero deposit amount. |
 | `InvalidAssetDecimals(uint8 decimals)` | Token decimals don’t match vault expectations. | Confirm correct ERC-20 asset is being used. |
 | `DustyBucket(address pool, uint256 bucket)` | Operation would leave/create LP below `LP_DUST`. | Choose a bucket/amount large enough to avoid dust. |
-| `FundsNotAvailable()` | Buffer lacks funds to cover withdraw/redeem/return. | Wait for a keeper to refill Buffer or reduce request. |
 | `ZeroAddress()` | Operation attempted with a zero address. | Provide a valid non-zero address. |
 | `NotAuthorized()` | Caller lacks required role. | Call must be from admin, keeper, or swapper as appropriate. |
 | `VaultUnpaused()` | Action requires vault paused but it is active. | Pause vault first before retrying (admin only). |
@@ -60,7 +59,7 @@ The external override functions (`totalAssets`, `decimals`, `deposit`, `mint`, `
     * `address receiver` - the address that will receive the corresponding vault shares
 * Outputs:
     * `uint256` - the amount of shares received
-* Notes: 
+* Notes:
     * A deposit fee `(toll)` may be applied at the discretion of the vault operator, thereby reducing the net assets converted into shares.
     * Function execution is blocked if the vault is paused or already processing another critical operation `(lock)`.
     * For avoidance of doubt, minted shares use the vault's share decimals (18), while the deposited amount is in the underlying asset's native decimals.
@@ -72,7 +71,7 @@ The external override functions (`totalAssets`, `decimals`, `deposit`, `mint`, `
     * `address receiver` - the address that will receive the minted shares
 * Outputs:
     * `uint256` - the amount of shares received
-* Notes: 
+* Notes:
     * Function execution is blocked if the vault is paused or already processing another critical operation `(lock)`.
 
 ### `function withdraw(uint256 assets, address receiver, address owner) public override lock notPaused returns (uint256)`
@@ -267,7 +266,7 @@ The keeper functions `move`, `moveFromBuffer`, and `moveToBuffer` enable authori
     * This function does not interact with vault shares; it is purely for moving collateral tokens out of Ajna and back into the vault.
     * Protected by `notPaused`, but not by the `lock` modifier (reentrancy guard is not applied here).
     * Operational context: this function is not part of routine rebalancing. It is intended for exceptional circumstances where collateral needs to be withdrawn from buckets back to the vault.
-* Risk: 
+* Risk:
     * Recovered collateral may not match the vault's underlying asset, creating potential asset mismatch exposure.
 
 ### `function returnQuoteToken(uint256 _toIndex, uint256 _amt) external`

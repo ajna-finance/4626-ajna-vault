@@ -51,4 +51,5 @@ interface IVaultAuth {
     function setMinBucketIndex(uint256 _minBucketIndex) external;
     function pause() external;
     function unpause() external;
+    function retrieveFees(address token, uint256 amount) external;
 }
