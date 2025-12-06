@@ -80,8 +80,8 @@ contract Vault is IVault, ERC4626 {
         LP_DUST = Math.max(WAD / (10**assetDecimals), 1e6 + 1);
 
         // Set up allowances for the Buffer and the pool
-        IERC20(asset()).approve(address(BUFFER), type(uint256).max);
-        IERC20(asset()).approve(address(POOL), type(uint256).max);
+        IERC20(asset()).safeApprove(address(BUFFER), type(uint256).max);
+        IERC20(asset()).safeApprove(address(POOL), type(uint256).max);
     }
 
     // EXTERNAL OVERRIDES
