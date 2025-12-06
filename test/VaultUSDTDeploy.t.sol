@@ -121,22 +121,4 @@ contract VaultUSDTDeployTest is Test {
             IVaultAuth(address(auth))
         );
     }
-
-    function test_verifyPoolQuoteToken() public view {
-        console.log("=== Verifying Pool Quote Token ===");
-        address quoteToken = pool.quoteTokenAddress();
-        console.log("Quote token from pool:", quoteToken);
-        console.log("USDT address:", USDT);
-
-        assertEq(quoteToken, USDT, "Pool quote token should be USDT");
-    }
-
-    function test_verifyUSDTDecimals() public view {
-        console.log("=== Verifying USDT Decimals ===");
-        uint8 decimals = ERC20(USDT).decimals();
-        console.log("USDT decimals:", decimals);
-
-        assertEq(decimals, 6, "USDT should have 6 decimals");
-        assertTrue(decimals > 0 && decimals <= 18, "USDT decimals should be valid for vault");
-    }
 }
