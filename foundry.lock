@@ -1,8 +1,0 @@
-{
-  "lib/ajna-core": {
-    "rev": "0f59e78031af76d62ad575c18405eb325b28849f"
-  },
-  "lib/forge-std": {
-    "rev": "8bbcf6e3f8f62f419e5429a0bd89331c85c37824"
-  }
-}
