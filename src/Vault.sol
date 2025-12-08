@@ -38,8 +38,8 @@ contract Vault is IVault, ERC4626 {
 
     // STATE VARIABLES
     uint256[] private buckets;
+    uint8     private bolt;    // reentrancy lock: 0 = off, 1 = on
 
-    uint8                       public bolt;                  // reentrancy lock: 0 = off, 1 = on
     mapping(uint256 => uint256) public bucketsIndex;          // (bucketIndex => index location in buckets)
     uint256                     public bufferLps;
     mapping(uint256 => uint256) public lps;                   // (bucketIndex => lps)
@@ -54,7 +54,7 @@ contract Vault is IVault, ERC4626 {
     }
 
     modifier notPaused() {
-        if (_paused()) revert VaultPaused();
+        _notPaused();
         _;
     }
 
@@ -513,5 +513,9 @@ contract Vault is IVault, ERC4626 {
 
     function _unlock() internal {
         bolt = 0;
+    }
+
+    function _notPaused() internal {
+        if (_paused()) revert VaultPaused();
     }
 }
