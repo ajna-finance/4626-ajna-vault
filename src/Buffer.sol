@@ -39,7 +39,7 @@ contract Buffer is IBuffer {
         assetDecimals = _assetDecimals;
         vault         = msg.sender;
 
-        IERC20(quo).approve(msg.sender, type(uint256).max);
+        IERC20(quo).safeApprove(msg.sender, type(uint256).max);
     }
 
     /**
